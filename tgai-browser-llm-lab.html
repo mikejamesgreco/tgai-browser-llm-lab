@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>TGAI Browser LLM Lab v0039</title>
+<title>TGAI Browser LLM Lab v0041</title>
 <meta name="description" content="A single-file local-first WebLLM lab with persistent chat context, local reference files, model discovery, and WebGPU diagnostics.">
 <style>
 *{box-sizing:border-box}
@@ -211,6 +211,47 @@ footer a{color:var(--muted);font-weight:700;text-decoration:none}
 footer a:hover{color:var(--blue);text-decoration:underline}
 @media(max-width:980px){.grid{grid-template-columns:1fr}.side{display:grid;grid-template-columns:1fr 1fr}}
 @media(max-width:680px){body{padding:8px}.side{display:flex}.formrow,.formrow.three{grid-template-columns:1fr}.metrics{grid-template-columns:1fr}.msg{max-width:96%}}
+
+    /* v0041 workspace separation */
+    .workspaceSeparator{
+      display:flex;align-items:center;gap:14px;margin:10px 0 2px;padding:12px 4px;
+      scroll-margin-top:16px
+    }
+    .workspaceSeparator::before,.workspaceSeparator::after{
+      content:"";height:3px;flex:1;border-radius:999px;
+      background:linear-gradient(90deg,transparent,var(--accent),transparent)
+    }
+    .workspaceSeparator span{
+      flex:0 0 auto;padding:7px 13px;border:1px solid var(--line);border-radius:999px;
+      background:var(--panel);color:var(--muted);font-size:9px;font-weight:800;
+      letter-spacing:.14em;text-transform:uppercase;white-space:nowrap
+    }
+    .workspaceNav{
+      display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px;padding:10px;
+      border:1px solid var(--line);border-radius:10px;background:var(--panel)
+    }
+    .workspaceNav a{
+      text-decoration:none;color:var(--text);font-size:10px;font-weight:800;
+      padding:7px 10px;border:1px solid var(--line);border-radius:7px;background:var(--bg)
+    }
+    .workspaceNav a:hover{border-color:var(--accent);color:var(--accent)}
+
+    main.grid{display:flex;flex-direction:column;gap:16px}
+    .workspaceCard{width:100%}
+    .workspaceHead{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;
+      padding-bottom:12px;margin-bottom:14px;border-bottom:1px solid var(--line)}
+    .workspaceHead h2{margin:2px 0 4px}
+    .workspaceHead p{margin:0;color:var(--muted);font-size:12px}
+    .workspaceKicker{display:block;font-size:9px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--accent)}
+    .workspaceHint{margin:0 0 10px;color:var(--muted);font-size:11px}
+    .referenceWorkspace{margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}
+    .referenceWorkspace>.card{box-shadow:none;margin:0;padding:0;border:0;background:transparent}
+    .imageWorkspace .imageLab{margin:0;border:0;padding:0;background:transparent}
+    .diagnosticGrid{display:grid;grid-template-columns:1fr 1fr 1.25fr;gap:12px;align-items:start}
+    .diagnosticGrid>.card{margin:0;box-shadow:none}
+    .diagnosticGrid .log{min-height:220px;max-height:420px}
+    @media(max-width:900px){.diagnosticGrid{grid-template-columns:1fr}.workspaceHead{display:block}}
+
 </style>
 </head>
 <body>
@@ -230,9 +271,13 @@ footer a:hover{color:var(--blue);text-decoration:underline}
   </header>
 
   <main class="grid">
-    <section class="card main">
-      <h2>Local browser model laboratory</h2>
-      <p class="sub">Compare open WebLLM models locally, inspect their capabilities and source pages, ground them with local files, copy individual replies, and experiment with vision-language models using local image attachments.</p>
+    <nav class="workspaceNav" aria-label="Workspace navigation">
+      <a href="#workspace-chat">Chat &amp; Reference</a>
+      <a href="#workspace-image">Text to Image</a>
+      <a href="#workspace-diagnostics">Diagnostics &amp; Logging</a>
+    </nav>
+    <section class="card main workspaceCard chatWorkspace" id="workspace-chat">
+      <div class="workspaceHead"><div><span class="workspaceKicker">Workspace 1</span><h2>Chat & Reference</h2><p>Load a WebLLM model, chat locally, attach images for VLMs, and ground answers with local reference files.</p></div></div>
 
       <div class="formrow three">
         <div>
@@ -296,12 +341,113 @@ footer a:hover{color:var(--blue);text-decoration:underline}
         <div class="attachList" id="chatImageList"></div>
         <div class="visionNote" id="visionNote">Images stay in this browser session. To actually inspect them, load a model marked VISION/VLM. Text-only models will not receive image attachments.</div>
       </div>
-      <div class="imageLab">
+
+      <div class="actions">
+        <button class="primary" id="sendBtn" disabled>Send</button>
+        <button id="stopBtn" disabled>Stop</button>
+        <button id="clearDisplayBtn">Clear Display</button>
+      </div>
+<div class="genSettings">
+        <div class="genGrid">
+          <div>
+            <label for="maxTokens">Maximum output tokens</label>
+            <select id="maxTokens">
+              <option value="256">256</option>
+              <option value="512">512</option>
+              <option value="768">768</option>
+              <option value="1024" selected>1024</option>
+              <option value="1536">1536</option>
+              <option value="2048">2048</option>
+              <option value="4096">4096</option>
+            </select>
+            <div class="genHint">Higher values allow longer replies, but generation can take longer and use more memory. Partial streamed output is preserved if a UI or diagnostic error occurs.</div>
+          </div>
+          <div>
+            <label for="responseStyle">Response style</label>
+            <select id="responseStyle">
+              <option value="concise">Concise</option>
+              <option value="normal" selected>Normal</option>
+              <option value="detailed">Detailed</option>
+            </select>
+            <div class="genHint">Concise is recommended for grounded SQL/code tasks.</div>
+          </div>
+          <div>
+            <label for="temperature">Temperature <span id="temperatureValue">0.20</span></label>
+            <div class="rangeRow">
+              <input id="temperature" type="range" min="0" max="1.2" value="0.2" step="0.05">
+            </div>
+            <div class="genHint">Lower values make answers more deterministic. 0.1–0.2 works well for reference-grounded work.</div>
+          </div>
+        </div>
+
+        <div class="finishStrip">
+          <div class="finishItem"><span>Stop reason</span><b id="finishReason">—</b></div>
+          <div class="finishItem"><span>Output tokens</span><b id="finishTokens">—</b></div>
+          <div class="finishItem"><span>Generation time</span><b id="finishTime">—</b></div>
+          <div class="finishItem"><span>Tokens/sec</span><b id="finishTps">—</b></div>
+        </div>
+      </div>
+
+      <div class="inspector" id="inspector">
+        <div class="inspectorHead">
+          <strong>Context Inspector — exact messages for the next request</strong>
+          <div class="controls">
+            <button id="refreshContextBtn">Refresh</button>
+            <button id="copyContextBtn">Copy</button>
+            <button id="toggleInspectorBtn">Show</button>
+          </div>
+        </div>
+        <div class="inspectorBody">
+          <div class="contextStats">
+            <div class="contextStat"><span>System chars</span><b id="cSystem">0</b></div>
+            <div class="contextStat"><span>History chars</span><b id="cHistory">0</b></div>
+            <div class="contextStat"><span>Prompt chars</span><b id="cPrompt">0</b></div>
+            <div class="contextStat"><span>Approx tokens</span><b id="cTokens">0</b></div>
+          </div>
+          <div class="contextBox" id="contextBox">Load a model or type a message, then refresh this inspector.</div>
+        </div>
+      </div>
+
+      <div class="referenceWorkspace">
+      <section class="card">
+        <h3>Reference Files</h3><p class="workspaceHint">Ground the chat model with local text, code, SQL, JSON, logs, and other supported reference files.</p>
+        <input id="fileInput" type="file" multiple accept=".txt,.md,.csv,.json,.sql,.pls,.pkb,.pks,.js,.ts,.html,.htm,.xml,.yaml,.yml,.log,.properties,.ini,.cfg">
+        <div class="actions" style="margin-bottom:6px">
+          <button id="clearRefsBtn">Clear References</button>
+        </div>
+        <div class="inlineCheck">
+          <input id="includeRefs" type="checkbox" checked>
+          <label for="includeRefs" style="margin:0;text-transform:none;letter-spacing:0;font-size:11px">Include reference material in every request</label>
+        </div>
+        <div class="inlineCheck" style="margin-top:7px">
+          <input id="referenceOnly" type="checkbox">
+          <label for="referenceOnly" style="margin:0;text-transform:none;letter-spacing:0;font-size:11px">Reference-only grounding: answer from loaded references or say the answer is not present</label>
+        </div>
+        <div class="inlineCheck" style="margin-top:7px">
+          <input id="useHistory" type="checkbox" checked>
+          <label for="useHistory" style="margin:0;text-transform:none;letter-spacing:0;font-size:11px">Include prior chat history on each turn</label>
+        </div>
+        <div style="margin-top:8px">
+          <label for="refLimit">Maximum reference characters sent per turn</label>
+          <input id="refLimit" type="number" min="1000" max="200000" step="1000" value="24000">
+        </div>
+        <div class="refList" id="refList"><div class="note">No files loaded.</div></div>
+        <div class="refPreview" id="refPreview">Reference preview will appear here.</div>
+        <p class="note">TGAI reads supported reference files as text and inserts up to the configured character limit into the system context. Large files are intentionally truncated.</p>
+      </section>
+      </div>
+    </section>
+
+
+    <div class="workspaceSeparator" aria-hidden="true"><span>Text to Image</span></div>
+    <section class="card workspaceCard imageWorkspace" id="workspace-image">
+      <div class="workspaceHead"><div><span class="workspaceKicker">Workspace 2</span><h2>Text to Image</h2><p>Generate images locally with the separate ONNX Runtime Web / WebGPU diffusion runtime.</p></div></div>
+      <div class="imageLab imageLabStandalone">
         <div class="imageLabTop">
           <strong>Local Text-to-Image Lab — SD-Turbo / SDXL-Lightning / WebGPU</strong>
           <a href="https://onnxruntime.ai/docs/tutorials/web/" target="_blank" rel="noopener noreferrer" title="Open ONNX Runtime Web documentation">ONNX Runtime Web ↗</a>
         </div>
-        <p>This is a separate browser-local diffusion runtime, not WebLLM. TGAI keeps only the active image inference sessions resident in memory. Switching image models releases the prior image sessions; changing dimensions rebuilds only the spatial U-Net/VAE sessions while retaining the reusable text encoder. Model files are kept in browser disk cache. v0039 keeps the working SDXL-Lightning Q4 path and adds contextual help throughout the lab using native browser tooltips and accessibility labels. The persistent-storage controls now explain that persistence only reduces automatic browser cache eviction; it does not upload or sync model files.</p>
+        <p>This workspace uses a browser-local diffusion runtime separate from WebLLM chat. TGAI keeps only the active image inference sessions resident in memory. Switching image models releases the prior image sessions; changing dimensions rebuilds only the spatial U-Net/VAE sessions while retaining the reusable text encoder. Model files are kept in browser disk cache. v0041 keeps the working SDXL-Lightning Q4 path and adds contextual help throughout the lab using native browser tooltips and accessibility labels. The persistent-storage controls now explain that persistence only reduces automatic browser cache eviction; it does not upload or sync model files.</p>
         <div class="imageGrid">
           <div>
             <label for="imagePrompt">Image prompt</label>
@@ -422,101 +568,12 @@ footer a:hover{color:var(--blue);text-decoration:underline}
         </div>
       </div>
 
-      <div class="actions">
-        <button class="primary" id="sendBtn" disabled>Send</button>
-        <button id="stopBtn" disabled>Stop</button>
-        <button id="clearDisplayBtn">Clear Display</button>
-      </div>
-<div class="genSettings">
-        <div class="genGrid">
-          <div>
-            <label for="maxTokens">Maximum output tokens</label>
-            <select id="maxTokens">
-              <option value="256">256</option>
-              <option value="512">512</option>
-              <option value="768">768</option>
-              <option value="1024" selected>1024</option>
-              <option value="1536">1536</option>
-              <option value="2048">2048</option>
-              <option value="4096">4096</option>
-            </select>
-            <div class="genHint">Higher values allow longer replies, but generation can take longer and use more memory. Partial streamed output is preserved if a UI or diagnostic error occurs.</div>
-          </div>
-          <div>
-            <label for="responseStyle">Response style</label>
-            <select id="responseStyle">
-              <option value="concise">Concise</option>
-              <option value="normal" selected>Normal</option>
-              <option value="detailed">Detailed</option>
-            </select>
-            <div class="genHint">Concise is recommended for grounded SQL/code tasks.</div>
-          </div>
-          <div>
-            <label for="temperature">Temperature <span id="temperatureValue">0.20</span></label>
-            <div class="rangeRow">
-              <input id="temperature" type="range" min="0" max="1.2" value="0.2" step="0.05">
-            </div>
-            <div class="genHint">Lower values make answers more deterministic. 0.1–0.2 works well for reference-grounded work.</div>
-          </div>
-        </div>
-
-        <div class="finishStrip">
-          <div class="finishItem"><span>Stop reason</span><b id="finishReason">—</b></div>
-          <div class="finishItem"><span>Output tokens</span><b id="finishTokens">—</b></div>
-          <div class="finishItem"><span>Generation time</span><b id="finishTime">—</b></div>
-          <div class="finishItem"><span>Tokens/sec</span><b id="finishTps">—</b></div>
-        </div>
-      </div>
-
-      <div class="inspector" id="inspector">
-        <div class="inspectorHead">
-          <strong>Context Inspector — exact messages for the next request</strong>
-          <div class="controls">
-            <button id="refreshContextBtn">Refresh</button>
-            <button id="copyContextBtn">Copy</button>
-            <button id="toggleInspectorBtn">Show</button>
-          </div>
-        </div>
-        <div class="inspectorBody">
-          <div class="contextStats">
-            <div class="contextStat"><span>System chars</span><b id="cSystem">0</b></div>
-            <div class="contextStat"><span>History chars</span><b id="cHistory">0</b></div>
-            <div class="contextStat"><span>Prompt chars</span><b id="cPrompt">0</b></div>
-            <div class="contextStat"><span>Approx tokens</span><b id="cTokens">0</b></div>
-          </div>
-          <div class="contextBox" id="contextBox">Load a model or type a message, then refresh this inspector.</div>
-        </div>
-      </div>
     </section>
 
-    <aside class="side">
-      <section class="card">
-        <h3>Local Reference Files</h3>
-        <input id="fileInput" type="file" multiple accept=".txt,.md,.csv,.json,.sql,.pls,.pkb,.pks,.js,.ts,.html,.htm,.xml,.yaml,.yml,.log,.properties,.ini,.cfg">
-        <div class="actions" style="margin-bottom:6px">
-          <button id="clearRefsBtn">Clear References</button>
-        </div>
-        <div class="inlineCheck">
-          <input id="includeRefs" type="checkbox" checked>
-          <label for="includeRefs" style="margin:0;text-transform:none;letter-spacing:0;font-size:11px">Include reference material in every request</label>
-        </div>
-        <div class="inlineCheck" style="margin-top:7px">
-          <input id="referenceOnly" type="checkbox">
-          <label for="referenceOnly" style="margin:0;text-transform:none;letter-spacing:0;font-size:11px">Reference-only grounding: answer from loaded references or say the answer is not present</label>
-        </div>
-        <div class="inlineCheck" style="margin-top:7px">
-          <input id="useHistory" type="checkbox" checked>
-          <label for="useHistory" style="margin:0;text-transform:none;letter-spacing:0;font-size:11px">Include prior chat history on each turn</label>
-        </div>
-        <div style="margin-top:8px">
-          <label for="refLimit">Maximum reference characters sent per turn</label>
-          <input id="refLimit" type="number" min="1000" max="200000" step="1000" value="24000">
-        </div>
-        <div class="refList" id="refList"><div class="note">No files loaded.</div></div>
-        <div class="refPreview" id="refPreview">Reference preview will appear here.</div>
-        <p class="note">TGAI reads supported reference files as text and inserts up to the configured character limit into the system context. Large files are intentionally truncated.</p>
-      </section>
-
+    <div class="workspaceSeparator" aria-hidden="true"><span>Diagnostics &amp; Logging</span></div>
+    <section class="card workspaceCard diagnosticsWorkspace" id="workspace-diagnostics">
+      <div class="workspaceHead"><div><span class="workspaceKicker">Workspace 3</span><h2>Diagnostics & Logging</h2><p>Browser/GPU capability, active session metrics, and runtime events in one place.</p></div></div>
+      <div class="diagnosticGrid">
       <section class="card">
         <h3>Browser / GPU</h3>
         <div class="metrics">
@@ -530,7 +587,6 @@ footer a:hover{color:var(--blue);text-decoration:underline}
           <pre id="gpuProbeOutput">Use “Probe GPU” to test default, high-performance, and low-power WebGPU adapter requests.</pre>
         </div>
       </section>
-
       <section class="card">
         <h3>Session</h3>
         <div class="metrics">
@@ -544,22 +600,21 @@ footer a:hover{color:var(--blue);text-decoration:underline}
           <div class="metric"><span>Catalog models</span><b id="mCatalog">—</b></div>
         </div>
       </section>
-
       <section class="card">
         <h3>Runtime Log</h3>
         <div class="log" id="log"></div>
       </section>
-    </aside>
+      </div>
+    </section>
   </main>
-
   <footer>
-    <span>© <span id="year"></span> mikejamesgreco.me LLC. All rights reserved. v0039 · <a class="docs" href="https://github.com/mikejamesgreco/tgai-browser-llm-lab#readme" target="_blank" rel="noopener noreferrer" title="Open the TGAI Browser LLM Lab repository and README on GitHub">GitHub / README ↗</a></span>
+    <span>© <span id="year"></span> mikejamesgreco.me LLC. All rights reserved. v0041 · <a class="docs" href="https://github.com/mikejamesgreco/tgai-browser-llm-lab#readme" target="_blank" rel="noopener noreferrer" title="Open the TGAI Browser LLM Lab repository and README on GitHub">GitHub / README ↗</a></span>
     <span>Single-file UI · GPU adapter probe · WebLLM chat/vision · Grounding · Multi-model diffusion via ORT WebGPU · persistent disk cache · SDXL-Lightning Q4 · dual text encoders · WebGPU compatibility diagnostics · multi-pass</span>
   </footer>
 </div>
 
 <script type="module">
-const APP_VERSION='v0039';
+const APP_VERSION='v0041';
 window.addEventListener('error',e=>{
   try{
     const msg=e?.error?.message||e?.message||'Unknown JavaScript error';
