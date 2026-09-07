@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>TGAI Browser LLM Lab v0042</title>
+<title>TGAI Browser LLM Lab v0043</title>
 <meta name="description" content="A single-file local-first WebLLM lab with persistent chat context, local reference files, model discovery, and WebGPU diagnostics.">
 <style>
 *{box-sizing:border-box}
@@ -212,7 +212,7 @@ footer a:hover{color:var(--blue);text-decoration:underline}
 @media(max-width:980px){.grid{grid-template-columns:1fr}.side{display:grid;grid-template-columns:1fr 1fr}}
 @media(max-width:680px){body{padding:8px}.side{display:flex}.formrow,.formrow.three{grid-template-columns:1fr}.metrics{grid-template-columns:1fr}.msg{max-width:96%}}
 
-    /* v0042 workspace separation */
+    /* v0043 workspace separation */
     .workspaceSeparator{
       display:flex;align-items:center;gap:14px;margin:10px 0 2px;padding:12px 4px;
       scroll-margin-top:16px
@@ -443,6 +443,8 @@ footer a:hover{color:var(--blue);text-decoration:underline}
             <li><b>Generation is extremely slow:</b> try a smaller model, lower-memory quantization, smaller image size, or fewer supported image passes. Check that the browser actually selected the intended GPU.</li>
             <li><b>Image generation fails during the first U-Net pass:</b> enable Image Compatibility Diagnostic mode and inspect the diagnostic result/runtime log.</li>
             <li><b>Cached models disappeared:</b> browser storage is managed by the browser and may be cleared manually or evicted under storage pressure. Persistent Storage can reduce, not eliminate, that possibility.</li>
+            <li><b>The model starts repeating the same line or short block:</b> very small models can fall into repetition loops. TGAI v0043 watches streamed output for an obvious repeated-line pattern and automatically interrupts it.</li>
+            <li><b>You press Stop:</b> TGAI now waits for WebLLM to acknowledge/finish the interrupted stream before declaring the model ready again. This avoids abandoning a live stream and then sending a new request into a runtime that is still busy.</li>
             <li><b>The browser freezes:</b> very large models can overwhelm available memory. Start with a smaller model and unload other AI runtimes before retrying.</li>
           </ul>
         </section>
@@ -525,7 +527,7 @@ footer a:hover{color:var(--blue);text-decoration:underline}
 
       <div style="margin-top:12px">
         <label for="prompt">Message</label>
-        <textarea id="prompt" placeholder="Ask the local model something…">Write a short, imaginative poem about a tiny local AI living inside a web browser, discovering that it can create something beautiful without sending anything to the cloud.</textarea>
+        <textarea id="prompt" placeholder="Ask the local model something…">Write a four-line poem about a tiny AI living inside a web browser. Use exactly four lines and do not repeat any line.</textarea>
       </div>
       <div class="attachPanel">
         <div class="attachRow">
@@ -544,6 +546,7 @@ footer a:hover{color:var(--blue);text-decoration:underline}
         <button id="stopBtn" disabled>Stop</button>
         <button id="clearDisplayBtn">Clear Display</button>
       </div>
+      <div class="genHint" id="stopRecoveryHint">Stop waits for the WebLLM stream to finish interrupting before Send is enabled again. Obvious repeated-line loops are stopped automatically.</div>
 <div class="genSettings">
         <div class="genGrid">
           <div>
@@ -557,7 +560,7 @@ footer a:hover{color:var(--blue);text-decoration:underline}
               <option value="2048">2048</option>
               <option value="4096">4096</option>
             </select>
-            <div class="genHint">Higher values allow longer replies, but generation can take longer and use more memory. Partial streamed output is preserved if a UI or diagnostic error occurs.</div>
+            <div class="genHint">Higher values allow longer replies, but generation can take longer and use more memory. TGAI preserves partial streamed output and automatically interrupts obvious repeated-line loops.</div>
           </div>
           <div>
             <label for="responseStyle">Response style</label>
@@ -644,7 +647,7 @@ footer a:hover{color:var(--blue);text-decoration:underline}
           <strong>Local Text-to-Image Lab — SD-Turbo / SDXL-Lightning / WebGPU</strong>
           <a href="https://onnxruntime.ai/docs/tutorials/web/" target="_blank" rel="noopener noreferrer" title="Open ONNX Runtime Web documentation">ONNX Runtime Web ↗</a>
         </div>
-        <p>This workspace uses a browser-local diffusion runtime separate from WebLLM chat. TGAI keeps only the active image inference sessions resident in memory. Switching image models releases the prior image sessions; changing dimensions rebuilds only the spatial U-Net/VAE sessions while retaining the reusable text encoder. Model files are kept in browser disk cache. v0042 keeps the working SDXL-Lightning Q4 path and adds contextual help throughout the lab using native browser tooltips and accessibility labels. The persistent-storage controls now explain that persistence only reduces automatic browser cache eviction; it does not upload or sync model files.</p>
+        <p>This workspace uses a browser-local diffusion runtime separate from WebLLM chat. TGAI keeps only the active image inference sessions resident in memory. Switching image models releases the prior image sessions; changing dimensions rebuilds only the spatial U-Net/VAE sessions while retaining the reusable text encoder. Model files are kept in browser disk cache. The image workspace keeps the working SDXL-Lightning Q4 path and provides contextual help throughout the lab using native browser tooltips and accessibility labels. The persistent-storage controls now explain that persistence only reduces automatic browser cache eviction; it does not upload or sync model files.</p>
         <div class="imageGrid">
           <div>
             <label for="imagePrompt">Image prompt</label>
@@ -805,13 +808,13 @@ footer a:hover{color:var(--blue);text-decoration:underline}
     </section>
   </main>
   <footer>
-    <span>© <span id="year"></span> mikejamesgreco.me LLC. All rights reserved. v0042 · <a class="docs" href="https://github.com/mikejamesgreco/tgai-browser-llm-lab#readme" target="_blank" rel="noopener noreferrer" title="Open the TGAI Browser LLM Lab repository and README on GitHub">GitHub / README ↗</a></span>
+    <span>© <span id="year"></span> mikejamesgreco.me LLC. All rights reserved. v0043 · <a class="docs" href="https://github.com/mikejamesgreco/tgai-browser-llm-lab#readme" target="_blank" rel="noopener noreferrer" title="Open the TGAI Browser LLM Lab repository and README on GitHub">GitHub / README ↗</a></span>
     <span>Single-file UI · GPU adapter probe · WebLLM chat/vision · Grounding · Multi-model diffusion via ORT WebGPU · persistent disk cache · SDXL-Lightning Q4 · dual text encoders · WebGPU compatibility diagnostics · multi-pass</span>
   </footer>
 </div>
 
 <script type="module">
-const APP_VERSION='v0042';
+const APP_VERSION='v0043';
 
 const helpOverlay=document.getElementById('helpOverlay');
 const helpDialog=document.getElementById('helpDialog');
@@ -886,7 +889,7 @@ const ui={
   imageCanvas:$('imageCanvas'),imageCanvasWrap:$('imageCanvasWrap'),imageMeta:$('imageMeta')
 };
 
-let webllm=null, engine=null, abortController=null, loadedModel='', generating=false;
+let webllm=null, engine=null, abortController=null, loadedModel='', generating=false, generationStopCause=null;
 let ortWebGPU=null, hfTransformers=null, imageRuntimeValidated=false, imageGenerating=false, imageStopRequested=false, sdTokenizer=null, sdTokenizer2=null, sdTokenizerModelId=null;
 let sdModels={text_encoder:null,text_encoder_2:null,unet:null,vae_decoder:null};
 let sdLoadedModelId=null;
@@ -1396,6 +1399,70 @@ function refreshContextInspector(){
 }
 
 
+
+function detectRepeatedTail(text){
+  const lines=String(text||'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+  if(lines.length<4)return null;
+  // Look for the same 1-, 2-, or 3-line block repeated at least four times at the tail.
+  for(let blockSize=1;blockSize<=3;blockSize++){
+    const need=blockSize*4;
+    if(lines.length<need)continue;
+    const tail=lines.slice(-need);
+    const block=tail.slice(0,blockSize);
+    let same=true;
+    for(let i=blockSize;i<tail.length&&same;i++){
+      if(tail[i]!==block[i%blockSize])same=false;
+    }
+    const chars=block.join(' ').length;
+    if(same&&chars>=12)return {blockSize,repeats:4,sample:block.join(' / ')};
+  }
+  return null;
+}
+
+async function requestGenerationStop(cause='manual'){
+  if(!generating||!abortController||abortController.signal.aborted)return;
+  generationStopCause=cause;
+  abortController.abort(cause);
+  ui.stop.disabled=true;
+  if(cause==='repetition'){
+    setStatus('Repetition loop detected. Stopping generation and waiting for the WebLLM stream to settle…');
+  }else{
+    setStatus('Stop requested. Waiting for the WebLLM stream to settle before enabling Send again…');
+  }
+  try{
+    if(engine?.interruptGenerate){
+      await engine.interruptGenerate();
+      log('WebLLM interrupt request acknowledged.');
+    }
+  }catch(err){
+    log(`WebLLM interrupt warning: ${err.message||err}`);
+  }
+}
+
+async function nextStreamItem(iterator,signal,stopTimeoutMs=10000){
+  const nextPromise=iterator.next();
+  if(signal.aborted){
+    return await Promise.race([
+      nextPromise,
+      new Promise((_,reject)=>setTimeout(()=>reject(new Error('__TGAI_STOP_TIMEOUT__')),stopTimeoutMs))
+    ]);
+  }
+  let onAbort;
+  const abortPromise=new Promise(resolve=>{
+    onAbort=()=>resolve({__tgaiAbort:true});
+    signal.addEventListener('abort',onAbort,{once:true});
+  });
+  const first=await Promise.race([nextPromise,abortPromise]);
+  if(onAbort)signal.removeEventListener('abort',onAbort);
+  if(first&&first.__tgaiAbort){
+    return await Promise.race([
+      nextPromise,
+      new Promise((_,reject)=>setTimeout(()=>reject(new Error('__TGAI_STOP_TIMEOUT__')),stopTimeoutMs))
+    ]);
+  }
+  return first;
+}
+
 function setFinishStatus(reason='—',tokens='—',seconds='—',tps='—'){
   ui.finishReason.textContent=reason;
   ui.finishTokens.textContent=tokens;
@@ -1406,6 +1473,7 @@ function normalizeFinishReason(reason){
   if(reason==='length')return 'MAX TOKENS';
   if(reason==='stop')return 'NATURAL STOP';
   if(reason==='cancelled'||reason==='abort')return 'STOPPED';
+  if(reason==='repetition')return 'REPETITION GUARD';
   return reason ? String(reason).toUpperCase() : 'UNKNOWN';
 }
 
@@ -2509,6 +2577,7 @@ async function generate(){
   generating=true;ui.send.disabled=true;ui.load.disabled=true;ui.stop.disabled=false;
   ui.tps.textContent='—';ui.genMetric.textContent='Running…';setFinishStatus('GENERATING…','—','—','—');
   abortController=new AbortController();
+  generationStopCause=null;
   appendMessage('user',prompt + (chatImages.length?`\n[${chatImages.length} image attachment(s)]`:''));
   const assistantDiv=appendMessage('assistant','…');
   ui.prompt.value='';
@@ -2526,23 +2595,42 @@ async function generate(){
     const stream=await engine.chat.completions.create({
       messages,temperature:Number(ui.temperature.value),max_tokens:Number(ui.maxTokens.value),stream:true,stream_options:{include_usage:true}
     });
-    for await(const chunk of stream){
+    const iterator=stream[Symbol.asyncIterator]();
+    while(true){
+      const step=await nextStreamItem(iterator,abortController.signal);
+      if(step.done)break;
+      const chunk=step.value;
       if(chunk?.choices?.[0]?.finish_reason) finishReason=chunk.choices[0].finish_reason;
       if(chunk?.usage?.completion_tokens!=null) outputTokens=chunk.usage.completion_tokens;
-      if(abortController.signal.aborted){stopped=true;break}
+      if(chunk?.usage)usage=chunk.usage;
+
+      // Once Stop is requested, keep draining the interrupted stream instead of abandoning
+      // the async iterator. This lets WebLLM settle before the UI permits the next request.
+      if(abortController.signal.aborted){
+        stopped=true;
+        continue;
+      }
+
       const delta=chunk.choices?.[0]?.delta?.content||'';
       full+=delta;
       const visible=finalAnswerOnly(full);
       setMessageText(assistantDiv,visible||(containsHiddenReasoning(full)?'Reasoning locally…':'…'));
-      if(chunk.usage)usage=chunk.usage;
+
+      const repeated=detectRepeatedTail(visible);
+      if(repeated&&!abortController.signal.aborted){
+        log(`Repetition guard matched ${repeated.repeats}× a ${repeated.blockSize}-line block: "${repeated.sample.slice(0,140)}"`);
+        stopped=true;
+        requestGenerationStop('repetition');
+      }
     }
+    if(abortController.signal.aborted)stopped=true;
     const sec=(performance.now()-start)/1000;
     ui.genMetric.textContent=`${sec.toFixed(2)} s`;
     const outTokens=outputTokens ?? usage?.completion_tokens ?? null;
     const tps=Number.isFinite(outTokens)&&sec>0 ? (outTokens/sec) : null;
     ui.tps.textContent=tps!=null?tps.toFixed(2):'n/a';
 
-    if(stopped && !finishReason) finishReason='cancelled';
+    if(stopped && !finishReason) finishReason=(generationStopCause==='repetition'?'repetition':'cancelled');
     setFinishStatus(
       normalizeFinishReason(finishReason || (stopped?'cancelled':'stop')),
       Number.isFinite(outTokens)?String(outTokens):'—',
@@ -2558,39 +2646,71 @@ async function generate(){
     }else if(full&&containsHiddenReasoning(full)){
       setMessageText(assistantDiv,'The model generated reasoning but did not produce a final answer before generation ended.');
     }
-    setStatus(stopped?'Generation stopped; any final answer was retained in chat history.':'Generation complete; raw reasoning was hidden and final conversation context retained.');
+    if(stopped){
+      setStatus(generationStopCause==='repetition'
+        ? 'Generation stopped automatically because a repetition loop was detected. Model ready for the next prompt.'
+        : 'Generation stopped cleanly. The WebLLM stream has settled and the model is ready for the next prompt.');
+    }else{
+      setStatus('Generation complete; raw reasoning was hidden and final conversation context retained.');
+    }
   }catch(err){
     console.error(err);
     const sec=(performance.now()-start)/1000;
     const aborted=abortController?.signal?.aborted;
     const errText=err.message||String(err);
+    const stopTimedOut=errText==='__TGAI_STOP_TIMEOUT__';
     const disposed=isDisposedRuntimeError(err);
 
-    if(disposed && !full){
+    if(stopTimedOut){
+      invalidateStaleEngine('The interrupted WebLLM stream did not settle within 10 seconds, so TGAI marked the runtime stale rather than risk sending another request into a busy engine.');
+    }else if(disposed && !full){
       // The browser/WebGPU runtime may be reclaimed after a long idle period.
       // Restore the unsent prompt so the user can reload and retry without retyping.
       ui.prompt.value=submittedPrompt;
       invalidateStaleEngine('The WebLLM/WebGPU model runtime was disposed, most likely after the page sat idle.');
     }
 
-    // Never destroy already-streamed model output because of a UI/diagnostic error.
-    if(full){
-      const finalText=finalAnswerOnly(full);
-      setMessageText(assistantDiv,(finalText||'No final answer was produced.') + `\n\n[Generation ended with an application error: ${errText}]`);
+    const finalText=finalAnswerOnly(full);
+    if(aborted){
       if(finalText){
+        setMessageText(assistantDiv,finalText);
         chatHistory.push({role:'user',content:currentUserContent},{role:'assistant',content:finalText});
         updateSessionMetrics();
+      }else{
+        setMessageText(assistantDiv,'Generation was stopped before the model produced a final answer.');
+      }
+      setFinishStatus(
+        generationStopCause==='repetition'?'REPETITION GUARD':'STOPPED',
+        outputTokens??usage?.completion_tokens??'—',
+        `${sec.toFixed(1)} sec`,
+        '—'
+      );
+      if(stopTimedOut){
+        setStatus('Generation stopped, but the runtime did not settle cleanly. Reload the model before sending another prompt.');
+      }else{
+        setStatus(generationStopCause==='repetition'
+          ? 'Generation stopped automatically because a repetition loop was detected. Model ready for the next prompt.'
+          : 'Generation stopped cleanly. Model ready for the next prompt.');
       }
     }else{
-      setMessageText(assistantDiv,disposed
-        ? `The local model runtime was disposed while the page was idle. Your question has been restored below. Click Load Model, then Send again.`
-        : `Error: ${errText}`);
-    }
+      // Never destroy already-streamed model output because of a UI/diagnostic error.
+      if(full){
+        setMessageText(assistantDiv,(finalText||'No final answer was produced.') + `\n\n[Generation ended with an application error: ${errText}]`);
+        if(finalText){
+          chatHistory.push({role:'user',content:currentUserContent},{role:'assistant',content:finalText});
+          updateSessionMetrics();
+        }
+      }else{
+        setMessageText(assistantDiv,disposed
+          ? `The local model runtime was disposed while the page was idle. Your question has been restored below. Click Load Model, then Send again.`
+          : `Error: ${errText}`);
+      }
 
-    setFinishStatus(aborted?'STOPPED':'ERROR',outputTokens??usage?.completion_tokens??'—',`${sec.toFixed(1)} sec`,'—');
-    if(!disposed)setStatus(`Generation ended with an application error: ${errText}`);
+      setFinishStatus('ERROR',outputTokens??usage?.completion_tokens??'—',`${sec.toFixed(1)} sec`,'—');
+      if(!disposed)setStatus(`Generation ended with an application error: ${errText}`);
+    }
   }finally{
-    generating=false;abortController=null;
+    generating=false;abortController=null;generationStopCause=null;
     const active=modelCatalog.find(m=>m.model_id===loadedModel);
     ui.send.disabled=!engine||isEmbeddingModel(active);
     ui.load.disabled=false;ui.stop.disabled=true;
@@ -2695,8 +2815,7 @@ rebuildPassOptions();
 ui.load.addEventListener('click',loadModel);
 ui.send.addEventListener('click',generate);
 ui.stop.addEventListener('click',()=>{
-  if(abortController){abortController.abort();log('Stop requested.')}
-  try{engine?.interruptGenerate?.()}catch{}
+  requestGenerationStop('manual');
 });
 ui.newChat.addEventListener('click',newChat);
 ui.unload.addEventListener('click',unload);
