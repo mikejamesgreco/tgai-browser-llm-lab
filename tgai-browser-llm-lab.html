@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>TGAI Browser LLM Lab v0038</title>
+<title>TGAI Browser LLM Lab v0039</title>
 <meta name="description" content="A single-file local-first WebLLM lab with persistent chat context, local reference files, model discovery, and WebGPU diagnostics.">
 <style>
 *{box-sizing:border-box}
@@ -201,8 +201,6 @@ textarea{
   max-height:360px;overflow:auto;white-space:pre-wrap;background:#0b1220;color:#dbeafe;
   border-radius:7px;padding:10px;font:10px/1.45 Consolas,Monaco,monospace;border:1px solid #1e293b
 }
-.testBtns{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
-.testBtns button{font-size:10px;padding:6px 8px}
 @media(max-width:680px){.contextStats{grid-template-columns:1fr 1fr}}
 
 footer{
@@ -280,7 +278,7 @@ footer a:hover{color:var(--blue);text-decoration:underline}
       <div class="status" id="status">Initializing.</div>
 
       <div class="chat" id="chat">
-        <div class="msg system"><span class="who">TGAI</span>Load a model, then start a conversation. Chat history stays in this page until you click New Chat or reload it. After a long idle period, the browser may reclaim the WebGPU model runtime; v0038 detects that condition, restores your unsent question, and lets you reload the cached model.</div>
+        <div class="msg system"><span class="who">TGAI</span>Load a model, then start a conversation. Chat history stays in this page until you click New Chat or reload it. After a long idle period, the browser may reclaim the WebGPU model runtime. TGAI detects that condition, restores your unsent question, and lets you reload the cached model.</div>
       </div>
 
       <div style="margin-top:12px">
@@ -301,9 +299,9 @@ footer a:hover{color:var(--blue);text-decoration:underline}
       <div class="imageLab">
         <div class="imageLabTop">
           <strong>Local Text-to-Image Lab — SD-Turbo / SDXL-Lightning / WebGPU</strong>
-          <a href="https://github.com/dakenf/diffusers.js" target="_blank" rel="noopener noreferrer">diffusers.js ↗</a>
+          <a href="https://onnxruntime.ai/docs/tutorials/web/" target="_blank" rel="noopener noreferrer" title="Open ONNX Runtime Web documentation">ONNX Runtime Web ↗</a>
         </div>
-        <p>This is a separate browser-local diffusion runtime, not WebLLM. TGAI keeps only the active image inference sessions resident in memory. Switching image models releases the prior image sessions; changing dimensions rebuilds only the spatial U-Net/VAE sessions while retaining the reusable text encoder. Model files are kept in browser disk cache. v0038 keeps the working SDXL-Lightning Q4 path and adds contextual help throughout the lab using native browser tooltips and accessibility labels. The persistent-storage controls now explain that persistence only reduces automatic browser cache eviction; it does not upload or sync model files.</p>
+        <p>This is a separate browser-local diffusion runtime, not WebLLM. TGAI keeps only the active image inference sessions resident in memory. Switching image models releases the prior image sessions; changing dimensions rebuilds only the spatial U-Net/VAE sessions while retaining the reusable text encoder. Model files are kept in browser disk cache. v0039 keeps the working SDXL-Lightning Q4 path and adds contextual help throughout the lab using native browser tooltips and accessibility labels. The persistent-storage controls now explain that persistence only reduces automatic browser cache eviction; it does not upload or sync model files.</p>
         <div class="imageGrid">
           <div>
             <label for="imagePrompt">Image prompt</label>
@@ -417,7 +415,7 @@ footer a:hover{color:var(--blue);text-decoration:underline}
         <div class="imageMeta" style="margin-top:8px">Stop Image is cooperative: it stops at the next safe boundary between WebGPU operations. A single text-encoder, U-Net, or VAE run already executing on the GPU cannot be interrupted mid-call without risking the inference session.</div>
 <div id="imageStatus" class="imageStatus">Image model not loaded. First load downloads roughly 2.4 GB of SD-Turbo ONNX model data plus tokenizer files into browser cache.</div>
         <div class="progress" aria-label="Image runtime loading progress"><div id="imageProgressBar"></div></div>
-        <div id="imageProgressText" class="imageMeta">No image-model transfer active. v0038 first validates ONNX Runtime WebGPU itself before attempting any multi-gigabyte model transfer.</div>
+        <div id="imageProgressText" class="imageMeta">No image-model transfer active. TGAI validates ONNX Runtime WebGPU before attempting a multi-gigabyte model transfer.</div>
         <div id="imageCanvasWrap" class="imageCanvasWrap">
           <canvas id="imageCanvas" width="512" height="512"></canvas>
           <div id="imageMeta" class="imageMeta"></div>
@@ -429,14 +427,7 @@ footer a:hover{color:var(--blue);text-decoration:underline}
         <button id="stopBtn" disabled>Stop</button>
         <button id="clearDisplayBtn">Clear Display</button>
       </div>
-      <div class="testBtns">
-        <button data-test="1">Test 1: Header + OU</button>
-        <button data-test="2">Test 2: Add Order Type</button>
-        <button data-test="3">Test 3: Add Customer</button>
-        <button data-test="4">Test 4: Add Account + Sort</button>
-      </div>
-
-      <div class="genSettings">
+<div class="genSettings">
         <div class="genGrid">
           <div>
             <label for="maxTokens">Maximum output tokens</label>
@@ -449,7 +440,7 @@ footer a:hover{color:var(--blue);text-decoration:underline}
               <option value="2048">2048</option>
               <option value="4096">4096</option>
             </select>
-            <div class="genHint">Higher values allow longer replies, but generation can take longer and use more memory. v0038 preserves partial streamed output even if a UI/diagnostic error occurs.</div>
+            <div class="genHint">Higher values allow longer replies, but generation can take longer and use more memory. Partial streamed output is preserved if a UI or diagnostic error occurs.</div>
           </div>
           <div>
             <label for="responseStyle">Response style</label>
@@ -523,7 +514,7 @@ footer a:hover{color:var(--blue);text-decoration:underline}
         </div>
         <div class="refList" id="refList"><div class="note">No files loaded.</div></div>
         <div class="refPreview" id="refPreview">Reference preview will appear here.</div>
-        <p class="note">For this v0038 experiment, TGAI reads supported files as text and inserts up to the configured character limit into the system context. Large files are intentionally truncated.</p>
+        <p class="note">TGAI reads supported reference files as text and inserts up to the configured character limit into the system context. Large files are intentionally truncated.</p>
       </section>
 
       <section class="card">
@@ -562,13 +553,13 @@ footer a:hover{color:var(--blue);text-decoration:underline}
   </main>
 
   <footer>
-    <span>© <span id="year"></span> mikejamesgreco.me LLC. All rights reserved. v0038 · <a class="docs" href="https://github.com/mikejamesgreco/tgai-browser-llm-lab#readme" target="_blank" rel="noopener noreferrer" title="Open the TGAI Browser LLM Lab repository and README on GitHub">GitHub / README ↗</a></span>
+    <span>© <span id="year"></span> mikejamesgreco.me LLC. All rights reserved. v0039 · <a class="docs" href="https://github.com/mikejamesgreco/tgai-browser-llm-lab#readme" target="_blank" rel="noopener noreferrer" title="Open the TGAI Browser LLM Lab repository and README on GitHub">GitHub / README ↗</a></span>
     <span>Single-file UI · GPU adapter probe · WebLLM chat/vision · Grounding · Multi-model diffusion via ORT WebGPU · persistent disk cache · SDXL-Lightning Q4 · dual text encoders · WebGPU compatibility diagnostics · multi-pass</span>
   </footer>
 </div>
 
 <script type="module">
-const APP_VERSION='v0038';
+const APP_VERSION='v0039';
 window.addEventListener('error',e=>{
   try{
     const msg=e?.error?.message||e?.message||'Unknown JavaScript error';
@@ -1977,7 +1968,7 @@ async function loadImageModel(){
     ui.imageProgressText.textContent=`Load stopped: ${msg}`;
     if(/external data|onnx_data|MountedFiles/i.test(msg)){
       setImageStatus(`Image model load failed while resolving split ONNX external weights: ${msg}`);
-      ui.cacheStatus.textContent='Split ONNX external-data loading failed. TGAI v0038 explicitly supplies model.onnx_data to ONNX Runtime Web; if this persists, the model package likely needs a browser-specific conversion.';
+      ui.cacheStatus.textContent='Split ONNX external-data loading failed. TGAI explicitly supplies model.onnx_data to ONNX Runtime Web; if this persists, the model package likely needs a browser-specific conversion.';
     }else{
       setImageStatus(`Image model load failed: ${msg}`);
     }
@@ -2356,8 +2347,6 @@ document.addEventListener('visibilitychange',()=>{
 if(!ui.loadImageRuntime){
   console.error('TGAI startup wiring error: image runtime button was not found.');
   setStatus('Startup wiring error: image runtime button was not found.');
-}else{
-  log('Image Model button wiring: OK.');
 }
 ui.probeGpu.addEventListener('click',()=>probeWebGPU(true));
 ui.loadImageRuntime.addEventListener('click',()=>{
@@ -2531,29 +2520,13 @@ ui.referenceOnly.addEventListener('change',()=>{
 ui.useHistory.addEventListener('change',refreshContextInspector);
 ui.prompt.addEventListener('input',()=>{if(ui.inspector.classList.contains('open'))refreshContextInspector()});
 
-const stagedTests={
-  '1':'Using only the local reference material, write an old-school Oracle SQL query that takes an order number and returns order_number and operating_unit_name. Use comma-separated tables and WHERE predicates. Do not use ANSI JOIN syntax.',
-  '2':'Using the query we have been building, add the order type name while preserving the old-school Oracle join syntax and the :order_number bind variable.',
-  '3':'Using the query we have been building, add the customer name while preserving all existing columns and joins.',
-  '4':'Using the query we have been building, add customer account number and sort by ordered_date descending. Preserve the old-school Oracle join syntax.'
-};
-document.querySelectorAll('[data-test]').forEach(btn=>{
-  btn.addEventListener('click',()=>{
-    ui.prompt.value=stagedTests[btn.dataset.test]||'';
-    refreshContextInspector();
-    ui.prompt.focus();
-  });
-});
-
-
 ui.temperatureValue.textContent=Number(ui.temperature.value).toFixed(2);
 setFinishStatus();
 inspectWebGPU();
 probeWebGPU(false);
-log('TGAI v0038 ready. External catalog chooser uses an explicit button + hidden file input.');
+log(`TGAI ${APP_VERSION} ready.`);
 ensureWebLLM().catch(err=>setStatus(`Could not load WebLLM catalog: ${err.message||err}`));
 renderReferences();
-log('TGAI Browser LLM Lab v0038 initialized.');
 </script>
 </body>
 </html>
