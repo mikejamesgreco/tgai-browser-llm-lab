@@ -1,0 +1,2559 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TGAI Browser LLM Lab v0038</title>
+<meta name="description" content="A single-file local-first WebLLM lab with persistent chat context, local reference files, model discovery, and WebGPU diagnostics.">
+<style>
+*{box-sizing:border-box}
+:root{
+  --bg:#f4f6f8;--panel:#fff;--text:#1f2937;--muted:#64748b;--line:#d9e1ea;
+  --blue:#2563eb;--blue2:#1d4ed8;--soft:#f8fafc;--good:#15803d;--warn:#b45309;--bad:#b91c1c;
+}
+html,body{margin:0;min-height:100%;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text)}
+body{padding:18px}
+.app{max-width:1500px;margin:0 auto;min-height:calc(100vh - 36px);display:flex;flex-direction:column;gap:14px}
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
+  padding:12px 14px;background:linear-gradient(#fff,#fbfcfe);border:1px solid var(--line);
+  border-radius:10px;box-shadow:0 2px 8px rgba(15,23,42,.05)
+}
+.brand{display:flex;flex-direction:column;gap:2px}
+.brand strong{font-size:22px;line-height:1.02;letter-spacing:-.03em}
+.brand small{
+  font-size:8px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);
+  opacity:.42;white-space:nowrap;animation:tgaiSoftBlink 2.2s ease-in-out infinite
+}
+@keyframes tgaiSoftBlink{
+  0%,100%{opacity:.28}
+  50%{opacity:.95}
+}
+@media (prefers-reduced-motion:reduce){
+  .brand small{animation:none;opacity:.72}
+}
+.docs{font-size:9px;font-weight:700;color:var(--muted);text-decoration:none;margin-top:2px}
+.docs:hover{color:var(--blue);text-decoration:underline}
+.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+button,select,input,textarea{font-family:Arial,Helvetica,sans-serif}
+button{
+  border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:7px;
+  padding:8px 10px;font-weight:800;font-size:12px;cursor:pointer
+}
+button:hover{border-color:#94a3b8}
+button.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+button.primary:hover{background:var(--blue2)}
+button.danger{color:#991b1b}
+button:disabled{opacity:.45;cursor:not-allowed}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:14px;align-items:start}
+.card{background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 4px 15px rgba(15,23,42,.04)}
+.main{padding:14px}
+.side{display:flex;flex-direction:column;gap:14px}
+.side .card{padding:14px}
+h2,h3{margin:0}
+h2{font-size:18px}
+h3{font-size:14px;margin-bottom:9px}
+.sub{font-size:12px;color:var(--muted);margin:6px 0 14px;line-height:1.45}
+.formrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:end;margin-bottom:9px}
+.formrow.three{grid-template-columns:minmax(0,1fr) 110px auto}
+label{display:block;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:5px}
+select,input[type=number],input[type=text]{
+  width:100%;border:1px solid #cbd5e1;background:#fff;color:#1f2937;border-radius:7px;padding:9px;font-size:12px
+}
+input[type=file]{font-size:11px;max-width:100%}
+textarea{
+  width:100%;min-height:92px;resize:vertical;border:1px solid #cbd5e1;border-radius:8px;padding:11px;
+  color:#1f2937;background:#fff;font-size:13px;line-height:1.45
+}
+.progress{height:12px;border:1px solid #cbd5e1;border-radius:999px;background:#eef2f7;overflow:hidden;margin:8px 0}
+.progress>div{height:100%;width:0;background:#2563eb;transition:width .12s linear}
+.status{font-size:12px;color:#475569;line-height:1.45;min-height:34px}
+.badge{
+  display:inline-flex;align-items:center;gap:6px;padding:5px 8px;border:1px solid var(--line);
+  background:var(--soft);border-radius:999px;font-size:10px;font-weight:800;color:#475569
+}
+.badge.good{color:var(--good);border-color:#bbf7d0;background:#f0fdf4}
+.badge.warn{color:var(--warn);border-color:#fed7aa;background:#fff7ed}
+.badge.bad{color:var(--bad);border-color:#fecaca;background:#fef2f2}
+.metrics{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.metric{padding:8px;background:var(--soft);border:1px solid #e2e8f0;border-radius:8px;min-width:0}
+.metric span{display:block;color:var(--muted);font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.07em}
+.metric b{display:block;font-size:12px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.log{
+  max-height:210px;overflow:auto;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;
+  padding:8px;font:10px/1.45 Consolas,Monaco,monospace;color:#475569;white-space:pre-wrap
+}
+.note{font-size:11px;color:var(--muted);line-height:1.45}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin:9px 0 12px}
+.chat{
+  min-height:330px;max-height:55vh;overflow:auto;background:#f8fafc;border:1px solid #dbe3ec;
+  border-radius:9px;padding:12px;display:flex;flex-direction:column;gap:10px
+}
+.msg{max-width:88%;border-radius:10px;padding:9px 11px;font-size:13px;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere}
+.msg.user{align-self:flex-end;background:#dbeafe;border:1px solid #bfdbfe}
+.msg.assistant{align-self:flex-start;background:#0f172a;color:#e2e8f0;border:1px solid #1e293b;font-family:Consolas,Monaco,monospace}
+.msg.system{align-self:center;background:#fff7ed;color:#9a3412;border:1px solid #fed7aa;font-size:11px}
+.msg .who{display:block;font:800 9px Arial,Helvetica,sans-serif;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px;opacity:.7}
+.refList{display:flex;flex-direction:column;gap:6px;margin:8px 0}
+.refItem{display:flex;justify-content:space-between;gap:8px;padding:7px 8px;border:1px solid #e2e8f0;border-radius:7px;background:#f8fafc;font-size:10px}
+.refItem span:first-child{font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.refPreview{
+  max-height:150px;overflow:auto;white-space:pre-wrap;background:#0f172a;color:#cbd5e1;
+  border-radius:7px;padding:8px;font:10px/1.4 Consolas,Monaco,monospace
+}
+.inlineCheck{display:flex;gap:6px;align-items:center;font-size:11px;color:#475569}
+.inlineCheck input{margin:0}
+.modelInfo{font-size:10px;color:var(--muted);line-height:1.4;margin:4px 0 10px}
+
+
+
+
+
+.provenance{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:8px}
+.provBox{padding:7px 8px;border:1px solid #dbe3ee;border-radius:7px;background:#fff;font-size:9px;line-height:1.35}
+.provBox b{display:block;font-size:8px;letter-spacing:.05em;text-transform:uppercase;color:#64748b;margin-bottom:2px}
+.modelLegend{font-size:9px;color:#64748b;margin-top:5px}
+@media(max-width:800px){.provenance{grid-template-columns:1fr}}
+
+.catalogTools{display:flex;gap:8px;align-items:end;flex-wrap:wrap;margin-top:9px;padding:9px;border:1px dashed #cbd5e1;border-radius:9px;background:#f8fafc}
+.catalogTools>div{min-width:220px;flex:1}
+.catalogStatus{font-size:10px;color:#334155;margin-top:7px;font-weight:700;padding:6px 8px;background:#fff;border-radius:6px;border:1px solid #e2e8f0}
+.sourceBuiltin{background:#dbeafe;color:#1e40af}.sourceCustom{background:#fef3c7;color:#92400e}.sourceCurated{background:#dcfce7;color:#166534}.sourceInfo{background:#f1f5f9;color:#475569}
+
+.modelHelp{margin-top:8px;padding:10px;border:1px solid #dbe3ee;border-radius:9px;background:#f8fafc}
+.modelHelpTop{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}
+.modelBadges{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}
+.cap{font-size:8px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;padding:3px 6px;border-radius:999px;background:#e2e8f0;color:#334155}
+.cap.vision{background:#ede9fe;color:#5b21b6}.cap.code{background:#dcfce7;color:#166534}.cap.big{background:#ffedd5;color:#9a3412}
+.modelUse{font-size:10px;line-height:1.45;color:#475569;margin-top:7px}
+.modelHelp a{font-size:10px;font-weight:800;color:#2563eb;text-decoration:none}
+.modelHelp a:hover{text-decoration:underline}
+.msg{position:relative}
+.msgTools{display:flex;justify-content:flex-end;margin-top:7px}
+.copyMsg{font-size:9px;padding:4px 7px;border-radius:6px}
+.attachPanel{margin-top:10px;padding:9px;border:1px dashed #cbd5e1;border-radius:9px;background:#f8fafc}
+.attachRow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.attachList{display:flex;gap:7px;flex-wrap:wrap;margin-top:7px}
+.thumb{position:relative;width:74px;border:1px solid #cbd5e1;border-radius:7px;padding:4px;background:#fff}
+.thumb img{display:block;width:64px;height:54px;object-fit:cover;border-radius:4px}
+.thumb small{display:block;font-size:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px}
+.thumb button{position:absolute;right:2px;top:2px;padding:1px 4px;font-size:8px}
+.visionNote{font-size:9px;color:#64748b;margin-top:6px}
+.imageLab{margin-top:10px;padding:10px;border:1px solid #e2e8f0;border-radius:9px;background:#fff7ed}
+.imageLab strong{font-size:11px}.imageLab p{font-size:9px;color:#7c2d12;margin:4px 0 8px;line-height:1.4}
+.gpuProbe{margin-top:8px;padding:8px;border:1px solid #cbd5e1;border-radius:8px;background:#f8fafc}
+.gpuProbeTop,.imageLabTop{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.gpuProbe pre{margin:7px 0 0;max-height:170px;overflow:auto;white-space:pre-wrap;background:#0b1220;color:#dbeafe;border-radius:7px;padding:8px;font:9px/1.4 Consolas,Monaco,monospace}
+.imageGrid{display:grid;grid-template-columns:2fr .7fr .7fr;gap:7px;align-items:end}
+.imageGrid textarea{min-height:72px}
+.imageStatus{margin-top:7px;padding:7px;border-radius:7px;background:#fff;border:1px solid #fed7aa;font-size:9px;line-height:1.4}
+.imageActions{display:flex;gap:7px;flex-wrap:wrap;margin-top:7px}
+.imageCanvasWrap{margin-top:8px;display:none}
+.imageCanvasWrap.show{display:block}
+.imageCanvasWrap canvas{display:block;max-width:100%;height:auto;border:1px solid #cbd5e1;border-radius:8px;background:#111827}
+.imageMeta{margin-top:5px;font-size:9px;color:#64748b}
+    .resourcePanel{margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.035)}
+    .resourceHead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:9px}
+    .resourceGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+    .resourceBox{padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:rgba(0,0,0,.12)}
+    .resourceBox b{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.06em;opacity:.7;margin-bottom:3px}
+    .resourceBox span{font-size:12px;word-break:break-word}
+    @media(max-width:800px){.resourceGrid{grid-template-columns:1fr 1fr}}
+
+@media(max-width:760px){.imageGrid{grid-template-columns:1fr}}
+
+.genSettings{
+  margin-top:10px;padding:10px;border:1px solid #dbe3ee;border-radius:9px;background:#f8fafc
+}
+.genGrid{
+  display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:8px;align-items:end
+}
+.genGrid label{display:block;margin-bottom:4px}
+.genHint{font-size:9px;color:#64748b;margin-top:4px;line-height:1.35}
+.rangeRow{display:flex;align-items:center;gap:8px}
+.rangeRow input[type="range"]{flex:1}
+.finishStrip{
+  margin-top:8px;display:grid;grid-template-columns:repeat(4,1fr);gap:6px
+}
+.finishItem{padding:7px;border:1px solid #e2e8f0;border-radius:7px;background:#fff}
+.finishItem span{display:block;font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#64748b}
+.finishItem b{display:block;font-size:11px;margin-top:2px}
+@media(max-width:760px){
+  .genGrid{grid-template-columns:1fr}
+  .finishStrip{grid-template-columns:1fr 1fr}
+}
+
+.inspector{
+  margin-top:12px;border:1px solid #cbd5e1;border-radius:9px;background:#fff;overflow:hidden
+}
+.inspectorHead{
+  display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap;
+  padding:9px 10px;background:#f8fafc;border-bottom:1px solid #e2e8f0
+}
+.inspectorHead strong{font-size:12px}
+.inspectorBody{display:none;padding:10px}
+.inspector.open .inspectorBody{display:block}
+.contextStats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px}
+.contextStat{padding:7px;border:1px solid #e2e8f0;border-radius:7px;background:#f8fafc}
+.contextStat span{display:block;font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#64748b}
+.contextStat b{display:block;font-size:11px;margin-top:2px}
+.contextBox{
+  max-height:360px;overflow:auto;white-space:pre-wrap;background:#0b1220;color:#dbeafe;
+  border-radius:7px;padding:10px;font:10px/1.45 Consolas,Monaco,monospace;border:1px solid #1e293b
+}
+.testBtns{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.testBtns button{font-size:10px;padding:6px 8px}
+@media(max-width:680px){.contextStats{grid-template-columns:1fr 1fr}}
+
+footer{
+  margin-top:auto;padding:10px 2px 2px;color:var(--muted);font-size:10px;
+  display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap
+}
+footer a{color:var(--muted);font-weight:700;text-decoration:none}
+footer a:hover{color:var(--blue);text-decoration:underline}
+@media(max-width:980px){.grid{grid-template-columns:1fr}.side{display:grid;grid-template-columns:1fr 1fr}}
+@media(max-width:680px){body{padding:8px}.side{display:flex}.formrow,.formrow.three{grid-template-columns:1fr}.metrics{grid-template-columns:1fr}.msg{max-width:96%}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <strong title="TGAI Browser LLM Lab">TGAI Browser LLM Lab</strong>
+      <small title="The Greco AI — Conversational WebLLM + Grounding Lab">The Greco AI — Conversational WebLLM + Grounding Lab</small>
+      <a class="docs" href="https://github.com/mikejamesgreco/tgai-browser-llm-lab#readme" target="_blank" rel="noopener noreferrer" title="Open the TGAI Browser LLM Lab repository and README on GitHub">GitHub / Docs ↗</a>
+    </div>
+    <div class="controls">
+      <span class="badge" id="webgpuBadge">Checking WebGPU…</span>
+      <button id="probeGpuBtn" type="button" title="Ask the browser for a WebGPU adapter and report basic adapter/device capability information." aria-label="Probe browser WebGPU adapter">Probe GPU</button>
+      <button id="newChatBtn" title="Start a fresh local chat session and clear the current chat history shown on this page." aria-label="Start a new local chat">New Chat</button>
+      <button id="unloadBtn" title="Unload the active WebLLM model from browser memory to free CPU/GPU resources." aria-label="Unload active language model">Unload Model</button>
+    </div>
+  </header>
+
+  <main class="grid">
+    <section class="card main">
+      <h2>Local browser model laboratory</h2>
+      <p class="sub">Compare open WebLLM models locally, inspect their capabilities and source pages, ground them with local files, copy individual replies, and experiment with vision-language models using local image attachments.</p>
+
+      <div class="formrow three">
+        <div>
+          <label for="modelSelect">Available model</label>
+          <select id="modelSelect"><option>Loading model catalog…</option></select>
+        </div>
+        <div>
+          <label for="modelFilter">Filter</label>
+          <input id="modelFilter" type="text" placeholder="qwen, llama…">
+        </div>
+        <button class="primary" id="loadBtn">Load Model</button>
+      </div>
+      <div class="modelInfo" id="modelInfo">Loading the current WebLLM built-in model catalog…</div>
+      <div class="modelLegend">Dropdown groups now separate <b>Chat/Vision</b> from <b>Embedding / Retrieval</b> models. Embedding models can be loaded but cannot use normal chat; they are reserved for semantic search / future RAG.</div>
+      <div class="modelHelp" id="modelHelp">
+        <div class="modelHelpTop">
+          <strong id="modelFamily">Model Explorer</strong>
+          <a id="modelLink" href="https://github.com/mlc-ai/web-llm" target="_blank" rel="noopener noreferrer">Model / project info ↗</a>
+        </div>
+        <div class="modelBadges" id="modelBadges"></div>
+        <div class="modelUse" id="modelUse">Select a model to see a plain-English description of what it is likely to be useful for in everyday work.</div>
+        <div class="provenance">
+          <div class="provBox"><b>Availability</b><span id="provAvailability">WebLLM Built-In</span></div>
+          <div class="provBox"><b>TGAI Metadata</b><span id="provMetadata">None</span></div>
+          <div class="provBox"><b>Loadable Here</b><span id="provLoadable">Yes</span></div>
+        </div>
+      </div>
+      <div class="catalogTools">
+        <div>
+          <label>External TGAI model catalog (.json)</label>
+          <div class="attachRow">
+            <button id="chooseCatalogBtn" type="button">Load External Catalog</button>
+            <input id="catalogFile" type="file" accept=".json,application/json" hidden>
+            <span id="catalogFileName" class="catalogStatus" style="margin:0;flex:1">No catalog selected</span>
+          </div>
+          <div class="catalogStatus" id="catalogStatus" tabindex="0">Built-in WebLLM catalog only. Choose a TGAI JSON catalog; after selection it will be read, merged, and the result will be shown here.</div>
+        </div>
+        <button id="exportCatalogBtn">Export Catalog</button>
+        <button id="clearCatalogBtn">Clear Imported</button>
+      </div>
+
+      <div class="progress" aria-label="Model loading progress"><div id="progressBar"></div></div>
+      <div class="status" id="status">Initializing.</div>
+
+      <div class="chat" id="chat">
+        <div class="msg system"><span class="who">TGAI</span>Load a model, then start a conversation. Chat history stays in this page until you click New Chat or reload it. After a long idle period, the browser may reclaim the WebGPU model runtime; v0038 detects that condition, restores your unsent question, and lets you reload the cached model.</div>
+      </div>
+
+      <div style="margin-top:12px">
+        <label for="prompt">Message</label>
+        <textarea id="prompt" placeholder="Ask the local model something…">Write a short, imaginative poem about a tiny local AI living inside a web browser, discovering that it can create something beautiful without sending anything to the cloud.</textarea>
+      </div>
+      <div class="attachPanel">
+        <div class="attachRow">
+          <div>
+            <label for="chatImageInput">Chat image attachments</label>
+            <input id="chatImageInput" type="file" accept="image/*" multiple>
+          </div>
+          <button id="clearImagesBtn">Clear Images</button>
+        </div>
+        <div class="attachList" id="chatImageList"></div>
+        <div class="visionNote" id="visionNote">Images stay in this browser session. To actually inspect them, load a model marked VISION/VLM. Text-only models will not receive image attachments.</div>
+      </div>
+      <div class="imageLab">
+        <div class="imageLabTop">
+          <strong>Local Text-to-Image Lab — SD-Turbo / SDXL-Lightning / WebGPU</strong>
+          <a href="https://github.com/dakenf/diffusers.js" target="_blank" rel="noopener noreferrer">diffusers.js ↗</a>
+        </div>
+        <p>This is a separate browser-local diffusion runtime, not WebLLM. TGAI keeps only the active image inference sessions resident in memory. Switching image models releases the prior image sessions; changing dimensions rebuilds only the spatial U-Net/VAE sessions while retaining the reusable text encoder. Model files are kept in browser disk cache. v0038 keeps the working SDXL-Lightning Q4 path and adds contextual help throughout the lab using native browser tooltips and accessibility labels. The persistent-storage controls now explain that persistence only reduces automatic browser cache eviction; it does not upload or sync model files.</p>
+        <div class="imageGrid">
+          <div>
+            <label for="imagePrompt">Image prompt</label>
+            <textarea id="imagePrompt" title="Describe the image you want the local diffusion model to generate. Prompt interpretation varies by model." aria-label="Image generation prompt">a friendly retro computer terminal on a desk, glowing screen, 1980s technical illustration, clean composition</textarea>
+          </div>
+          <div>
+            <label for="imageModel">Image model</label>
+            <select id="imageModel" title="Choose the browser-local text-to-image model. SD-Turbo is the light/fast baseline; SDXL-Lightning Q4 is heavier and higher quality; SD 2.1 is retained as a legacy compatibility test." aria-label="Image model selector">
+              <option value="sd-turbo" selected>SD-Turbo · proven baseline · 1–4 passes</option>
+              <option value="sdxl-lightning-q4">SDXL-Lightning Q4 · browser WebGPU · 4 passes</option>
+              <option value="sd21">Stable Diffusion 2.1 Base · LEGACY / experimental</option>
+            </select>
+            <label for="imageCompatMode">WebGPU compatibility mode</label>
+            <select id="imageCompatMode" title="Normal uses regular logging. Diagnostic enables verbose ONNX Runtime and WebGPU compatibility logging, especially around the first U-Net pass." aria-label="WebGPU compatibility mode selector">
+              <option value="normal" selected>Normal</option>
+              <option value="diagnostic">Diagnostic · verbose ORT/WebGPU logging</option>
+            </select>
+            <div class="genHint">Use Diagnostic for first-pass WebGPU compatibility testing. It does not change diffusion math or silently fall back to another backend.</div>
+            <label for="imageSteps">Passes</label>
+            <select id="imageSteps" title="Choose the number of denoising passes. Recommended values depend on the selected model; more is not always better." aria-label="Image generation denoising passes">
+              <option value="1" selected>1 · fastest</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4 · best Turbo quality</option>
+            </select>
+            <label for="imageSizePreset">Size preset</label>
+            <select id="imageSizePreset" title="Choose a preset image resolution or Custom. Changing dimensions can rebuild spatial U-Net and VAE WebGPU sessions." aria-label="Image size preset selector">
+              <option value="256x256">256 × 256 · fastest</option>
+              <option value="384x384">384 × 384</option>
+              <option value="512x512" selected>512 × 512 · recommended</option>
+              <option value="512x768">512 × 768 · portrait</option>
+              <option value="768x512">768 × 512 · landscape</option>
+              <option value="768x768">768 × 768 · large square</option>
+              <option value="custom">Custom…</option>
+            </select>
+            <label for="imageWidth">Width px</label>
+            <input type="number" id="imageWidth" min="128" max="1024" step="64" value="512" title="Generated image width in pixels. TGAI normalizes dimensions to supported multiples of 64." aria-label="Generated image width in pixels">
+            <label for="imageHeight">Height px</label>
+            <input type="number" id="imageHeight" min="128" max="1024" step="64" value="512" title="Generated image height in pixels. TGAI normalizes dimensions to supported multiples of 64." aria-label="Generated image height in pixels">
+          </div>
+          <div>
+            <label for="imageSeed">Seed</label>
+            <input type="text" id="imageSeed" value="" placeholder="random each generation" title="Seed used to initialize diffusion noise. Reusing the same model, prompt, size, passes, and seed helps reproduce the same image." aria-label="Image generation random seed">
+            <label class="checkline" style="margin-top:0">
+              <input type="checkbox" id="imageRandomSeed" checked title="When enabled, TGAI automatically chooses a new seed before each image generation." aria-label="Randomize image seed every generation">
+              <span>Randomize every generation</span>
+            </label>
+            <button type="button" id="randomizeImageSeedBtn" class="secondary" title="Create a new random seed so the next generation begins from different noise." aria-label="Generate a new random image seed">New Seed</button>
+          </div>
+        </div>
+        <div class="imageActions">
+          <button id="loadImageRuntimeBtn" type="button" title="Load the selected image model into browser memory and initialize its WebGPU inference sessions." aria-label="Load selected image model into WebGPU memory">Load Image Model</button>
+          <button id="unloadImageRuntimeBtn" type="button" disabled title="Release image-model inference sessions from CPU/GPU memory while keeping cached model files on disk." aria-label="Unload image model from CPU and GPU memory">Unload Image Model</button>
+          <button id="generateImageBtn" class="primary" type="button" disabled title="Generate an image locally in this browser using the loaded image model, prompt, seed, size, and pass settings." aria-label="Generate image locally in browser">Generate Image</button>
+          <button id="stopImageBtn" type="button" disabled title="Request a cooperative stop. The current WebGPU operation finishes safely before generation stops." aria-label="Stop image generation after current GPU operation">Stop Image</button>
+          <button id="clearImageBtn" type="button" title="Clear the generated image from the page. This does not unload the model or clear its disk cache." aria-label="Clear generated image">Clear Image</button>
+        </div>
+        <div class="resourcePanel">
+          <div class="resourceHead">
+            <strong>Loaded Resources</strong>
+            <span class="imageMeta">Live inference memory vs browser disk cache</span>
+          </div>
+          <div class="resourceGrid">
+            <div class="resourceBox"><b>Chat model</b><span id="resChat">Unloaded</span></div>
+            <div class="resourceBox"><b>Image model</b><span id="resImage">Unloaded</span></div>
+            <div class="resourceBox"><b>Prepared size</b><span id="resSize">—</span></div>
+            <div class="resourceBox"><b>Text encoder</b><span id="resTextEncoder">Unloaded</span></div>
+            <div class="resourceBox"><b>U-Net</b><span id="resUnet">Unloaded</span></div>
+            <div class="resourceBox"><b>VAE decoder</b><span id="resVae">Unloaded</span></div>
+            <div class="resourceBox"><b>Model files</b><span id="resCache">Browser cache checked on load</span></div>
+            <div class="resourceBox"><b>Memory policy</b><span>One image model resident; split ONNX weights + SDXL dual-encoder conditioning supported; model files remain disk-cached after unload</span></div>
+          </div>
+        </div>
+                <div class="resourcePanel">
+          <div class="resourceHead">
+            <strong>Persistent Model Cache</strong>
+            <span class="imageMeta">Browser storage survives normal tab/browser restarts unless cleared or evicted</span>
+          </div>
+        <div class="small muted" style="margin-top:6px">
+          <b>Request Persistent Storage</b> asks the browser to treat this page's local cache as persistent, which reduces the chance that multi-gigabyte model files are automatically evicted when browser storage is under pressure. It does not upload, sync, or move model files outside the browser, and the browser may decline the request.
+        </div>
+          <div class="resourceGrid">
+            <div class="resourceBox"><b>Storage usage</b><span id="cacheUsage">Checking…</span></div>
+            <div class="resourceBox"><b>Storage quota</b><span id="cacheQuota">Checking…</span></div>
+            <div class="resourceBox"><b>Persistence</b><span id="cachePersistence">Checking…</span></div>
+            <div class="resourceBox"><b>SD-Turbo cache</b><span id="cacheSdTurbo">Checking…</span></div>
+            <div class="resourceBox"><b>SDXL-Lightning Q4 cache</b><span id="cacheSdxl">Checking…</span></div>
+            <div class="resourceBox"><b>SD 2.1 legacy cache</b><span id="cacheSd21">Checking…</span></div>
+            <div class="resourceBox"><b>Current origin</b><span id="cacheOrigin">Checking…</span></div>
+          </div>
+          <div class="imageActions" style="margin-top:10px">
+            <button id="refreshCacheBtn" type="button" title="Refresh browser storage usage, quota, persistence state, cache presence, and current origin information." aria-label="Refresh persistent model cache status">Refresh Cache Status</button>
+            <button id="persistCacheBtn" type="button" title="Ask the browser to protect this origin's cached model files from automatic storage-pressure eviction. This does not upload or sync anything, and the browser may decline." aria-label="Request persistent browser storage for cached model files">Request Persistent Storage</button>
+            <button id="clearSelectedCacheBtn" type="button" title="Delete the selected image model's cached files from browser storage. Unload that model first." aria-label="Clear selected image model cache">Clear Selected Model Cache</button>
+          </div>
+          <div id="cacheStatus" class="imageMeta">Cache manager ready.</div>
+        </div>
+        <div class="resourcePanel">
+          <div class="resourceHead">
+            <strong>Image Compatibility Diagnostics</strong>
+            <span class="imageMeta">First U-Net pass / WebGPU kernel compatibility</span>
+          </div>
+          <div class="resourceGrid">
+            <div class="resourceBox"><b>Mode</b><span id="imageDiagMode">Normal</span></div>
+            <div class="resourceBox"><b>First U-Net pass</b><span id="imageDiagFirstPass">Not tested</span></div>
+            <div class="resourceBox"><b>Kernel status</b><span id="imageDiagKernel">Not tested</span></div>
+            <div class="resourceBox"><b>Last diagnosis</b><span id="imageDiagResult">—</span></div>
+          </div>
+          <div class="imageMeta" id="imageDiagDetail">Diagnostic mode captures targeted ORT/WebGPU compatibility information without changing the selected model or scheduler.</div>
+        </div>
+        <div class="imageMeta" style="margin-top:8px">Stop Image is cooperative: it stops at the next safe boundary between WebGPU operations. A single text-encoder, U-Net, or VAE run already executing on the GPU cannot be interrupted mid-call without risking the inference session.</div>
+<div id="imageStatus" class="imageStatus">Image model not loaded. First load downloads roughly 2.4 GB of SD-Turbo ONNX model data plus tokenizer files into browser cache.</div>
+        <div class="progress" aria-label="Image runtime loading progress"><div id="imageProgressBar"></div></div>
+        <div id="imageProgressText" class="imageMeta">No image-model transfer active. v0038 first validates ONNX Runtime WebGPU itself before attempting any multi-gigabyte model transfer.</div>
+        <div id="imageCanvasWrap" class="imageCanvasWrap">
+          <canvas id="imageCanvas" width="512" height="512"></canvas>
+          <div id="imageMeta" class="imageMeta"></div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="primary" id="sendBtn" disabled>Send</button>
+        <button id="stopBtn" disabled>Stop</button>
+        <button id="clearDisplayBtn">Clear Display</button>
+      </div>
+      <div class="testBtns">
+        <button data-test="1">Test 1: Header + OU</button>
+        <button data-test="2">Test 2: Add Order Type</button>
+        <button data-test="3">Test 3: Add Customer</button>
+        <button data-test="4">Test 4: Add Account + Sort</button>
+      </div>
+
+      <div class="genSettings">
+        <div class="genGrid">
+          <div>
+            <label for="maxTokens">Maximum output tokens</label>
+            <select id="maxTokens">
+              <option value="256">256</option>
+              <option value="512">512</option>
+              <option value="768">768</option>
+              <option value="1024" selected>1024</option>
+              <option value="1536">1536</option>
+              <option value="2048">2048</option>
+              <option value="4096">4096</option>
+            </select>
+            <div class="genHint">Higher values allow longer replies, but generation can take longer and use more memory. v0038 preserves partial streamed output even if a UI/diagnostic error occurs.</div>
+          </div>
+          <div>
+            <label for="responseStyle">Response style</label>
+            <select id="responseStyle">
+              <option value="concise">Concise</option>
+              <option value="normal" selected>Normal</option>
+              <option value="detailed">Detailed</option>
+            </select>
+            <div class="genHint">Concise is recommended for grounded SQL/code tasks.</div>
+          </div>
+          <div>
+            <label for="temperature">Temperature <span id="temperatureValue">0.20</span></label>
+            <div class="rangeRow">
+              <input id="temperature" type="range" min="0" max="1.2" value="0.2" step="0.05">
+            </div>
+            <div class="genHint">Lower values make answers more deterministic. 0.1–0.2 works well for reference-grounded work.</div>
+          </div>
+        </div>
+
+        <div class="finishStrip">
+          <div class="finishItem"><span>Stop reason</span><b id="finishReason">—</b></div>
+          <div class="finishItem"><span>Output tokens</span><b id="finishTokens">—</b></div>
+          <div class="finishItem"><span>Generation time</span><b id="finishTime">—</b></div>
+          <div class="finishItem"><span>Tokens/sec</span><b id="finishTps">—</b></div>
+        </div>
+      </div>
+
+      <div class="inspector" id="inspector">
+        <div class="inspectorHead">
+          <strong>Context Inspector — exact messages for the next request</strong>
+          <div class="controls">
+            <button id="refreshContextBtn">Refresh</button>
+            <button id="copyContextBtn">Copy</button>
+            <button id="toggleInspectorBtn">Show</button>
+          </div>
+        </div>
+        <div class="inspectorBody">
+          <div class="contextStats">
+            <div class="contextStat"><span>System chars</span><b id="cSystem">0</b></div>
+            <div class="contextStat"><span>History chars</span><b id="cHistory">0</b></div>
+            <div class="contextStat"><span>Prompt chars</span><b id="cPrompt">0</b></div>
+            <div class="contextStat"><span>Approx tokens</span><b id="cTokens">0</b></div>
+          </div>
+          <div class="contextBox" id="contextBox">Load a model or type a message, then refresh this inspector.</div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="side">
+      <section class="card">
+        <h3>Local Reference Files</h3>
+        <input id="fileInput" type="file" multiple accept=".txt,.md,.csv,.json,.sql,.pls,.pkb,.pks,.js,.ts,.html,.htm,.xml,.yaml,.yml,.log,.properties,.ini,.cfg">
+        <div class="actions" style="margin-bottom:6px">
+          <button id="clearRefsBtn">Clear References</button>
+        </div>
+        <div class="inlineCheck">
+          <input id="includeRefs" type="checkbox" checked>
+          <label for="includeRefs" style="margin:0;text-transform:none;letter-spacing:0;font-size:11px">Include reference material in every request</label>
+        </div>
+        <div class="inlineCheck" style="margin-top:7px">
+          <input id="referenceOnly" type="checkbox">
+          <label for="referenceOnly" style="margin:0;text-transform:none;letter-spacing:0;font-size:11px">Reference-only grounding: answer from loaded references or say the answer is not present</label>
+        </div>
+        <div class="inlineCheck" style="margin-top:7px">
+          <input id="useHistory" type="checkbox" checked>
+          <label for="useHistory" style="margin:0;text-transform:none;letter-spacing:0;font-size:11px">Include prior chat history on each turn</label>
+        </div>
+        <div style="margin-top:8px">
+          <label for="refLimit">Maximum reference characters sent per turn</label>
+          <input id="refLimit" type="number" min="1000" max="200000" step="1000" value="24000">
+        </div>
+        <div class="refList" id="refList"><div class="note">No files loaded.</div></div>
+        <div class="refPreview" id="refPreview">Reference preview will appear here.</div>
+        <p class="note">For this v0038 experiment, TGAI reads supported files as text and inserts up to the configured character limit into the system context. Large files are intentionally truncated.</p>
+      </section>
+
+      <section class="card">
+        <h3>Browser / GPU</h3>
+        <div class="metrics">
+          <div class="metric"><span>WebGPU</span><b id="mWebgpu">Checking…</b></div>
+          <div class="metric"><span>Adapter</span><b id="mAdapter">—</b></div>
+          <div class="metric"><span>Device Memory</span><b id="mMemory">—</b></div>
+          <div class="metric"><span>JS Heap</span><b id="mHeap">—</b></div>
+        </div>
+        <div class="gpuProbe">
+          <div class="gpuProbeTop"><b>Adapter Probe</b><span id="gpuProbeSummary">Not run</span></div>
+          <pre id="gpuProbeOutput">Use “Probe GPU” to test default, high-performance, and low-power WebGPU adapter requests.</pre>
+        </div>
+      </section>
+
+      <section class="card">
+        <h3>Session</h3>
+        <div class="metrics">
+          <div class="metric"><span>Model</span><b id="mModel">None</b></div>
+          <div class="metric"><span>Est. VRAM</span><b id="mVram">—</b></div>
+          <div class="metric"><span>Chat turns</span><b id="mTurns">0</b></div>
+          <div class="metric"><span>Reference chars</span><b id="mRefs">0</b></div>
+          <div class="metric"><span>Load time</span><b id="mLoad">—</b></div>
+          <div class="metric"><span>Generation</span><b id="mGen">—</b></div>
+          <div class="metric"><span>Tokens / sec</span><b id="mTps">—</b></div>
+          <div class="metric"><span>Catalog models</span><b id="mCatalog">—</b></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h3>Runtime Log</h3>
+        <div class="log" id="log"></div>
+      </section>
+    </aside>
+  </main>
+
+  <footer>
+    <span>© <span id="year"></span> mikejamesgreco.me LLC. All rights reserved. v0038 · <a class="docs" href="https://github.com/mikejamesgreco/tgai-browser-llm-lab#readme" target="_blank" rel="noopener noreferrer" title="Open the TGAI Browser LLM Lab repository and README on GitHub">GitHub / README ↗</a></span>
+    <span>Single-file UI · GPU adapter probe · WebLLM chat/vision · Grounding · Multi-model diffusion via ORT WebGPU · persistent disk cache · SDXL-Lightning Q4 · dual text encoders · WebGPU compatibility diagnostics · multi-pass</span>
+  </footer>
+</div>
+
+<script type="module">
+const APP_VERSION='v0038';
+window.addEventListener('error',e=>{
+  try{
+    const msg=e?.error?.message||e?.message||'Unknown JavaScript error';
+    console.error('TGAI window error:',e?.error||e);
+    const s=document.getElementById('status');
+    if(s)s.textContent=`JavaScript error: ${msg}`;
+  }catch{}
+});
+window.addEventListener('unhandledrejection',e=>{
+  try{
+    const msg=e?.reason?.message||String(e?.reason||'Unhandled promise rejection');
+    console.error('TGAI promise rejection:',e?.reason);
+    const s=document.getElementById('status');
+    if(s)s.textContent=`JavaScript promise error: ${msg}`;
+  }catch{}
+});
+document.title=`TGAI Browser LLM Lab ${APP_VERSION}`;
+document.getElementById('year').textContent=new Date().getFullYear();
+
+const $=id=>document.getElementById(id);
+const ui={
+  model:$('modelSelect'),filter:$('modelFilter'),load:$('loadBtn'),send:$('sendBtn'),stop:$('stopBtn'),
+  newChat:$('newChatBtn'),unload:$('unloadBtn'),clearDisplay:$('clearDisplayBtn'),
+  prompt:$('prompt'),chat:$('chat'),status:$('status'),bar:$('progressBar'),log:$('log'),
+  badge:$('webgpuBadge'),webgpu:$('mWebgpu'),adapter:$('mAdapter'),memory:$('mMemory'),heap:$('mHeap'),
+  modelMetric:$('mModel'),vram:$('mVram'),turns:$('mTurns'),refs:$('mRefs'),loadMetric:$('mLoad'),
+  genMetric:$('mGen'),tps:$('mTps'),catalog:$('mCatalog'),modelInfo:$('modelInfo'),
+  fileInput:$('fileInput'),clearRefs:$('clearRefsBtn'),includeRefs:$('includeRefs'),
+  refLimit:$('refLimit'),refList:$('refList'),refPreview:$('refPreview'),
+  referenceOnly:$('referenceOnly'),useHistory:$('useHistory'),inspector:$('inspector'),
+  toggleInspector:$('toggleInspectorBtn'),refreshContext:$('refreshContextBtn'),copyContext:$('copyContextBtn'),
+  contextBox:$('contextBox'),cSystem:$('cSystem'),cHistory:$('cHistory'),cPrompt:$('cPrompt'),cTokens:$('cTokens'),
+  maxTokens:$('maxTokens'),responseStyle:$('responseStyle'),temperature:$('temperature'),temperatureValue:$('temperatureValue'),
+  finishReason:$('finishReason'),finishTokens:$('finishTokens'),finishTime:$('finishTime'),finishTps:$('finishTps'),
+  modelFamily:$('modelFamily'),modelLink:$('modelLink'),modelBadges:$('modelBadges'),modelUse:$('modelUse'),
+  chatImageInput:$('chatImageInput'),clearImages:$('clearImagesBtn'),chatImageList:$('chatImageList'),visionNote:$('visionNote'),
+  catalogFile:$('catalogFile'),chooseCatalog:$('chooseCatalogBtn'),catalogFileName:$('catalogFileName'),catalogStatus:$('catalogStatus'),exportCatalog:$('exportCatalogBtn'),clearCatalog:$('clearCatalogBtn'),
+  provAvailability:$('provAvailability'),provMetadata:$('provMetadata'),provLoadable:$('provLoadable'),
+  probeGpu:$('probeGpuBtn'),gpuProbeSummary:$('gpuProbeSummary'),gpuProbeOutput:$('gpuProbeOutput'),
+  imagePrompt:$('imagePrompt'),imageModel:$('imageModel'),imageCompatMode:$('imageCompatMode'),imageSteps:$('imageSteps'),imageSizePreset:$('imageSizePreset'),imageWidth:$('imageWidth'),imageHeight:$('imageHeight'),imageRandomSeed:$('imageRandomSeed'),randomizeImageSeedBtn:$('randomizeImageSeedBtn'),imageSeed:$('imageSeed'),
+  loadImageRuntime:$('loadImageRuntimeBtn'),unloadImageRuntime:$('unloadImageRuntimeBtn'),resChat:$('resChat'),resImage:$('resImage'),resSize:$('resSize'),resTextEncoder:$('resTextEncoder'),resUnet:$('resUnet'),resVae:$('resVae'),resCache:$('resCache'),cacheUsage:$('cacheUsage'),cacheQuota:$('cacheQuota'),cachePersistence:$('cachePersistence'),cacheSdTurbo:$('cacheSdTurbo'),cacheSdxl:$('cacheSdxl'),cacheSd21:$('cacheSd21'),cacheOrigin:$('cacheOrigin'),refreshCache:$('refreshCacheBtn'),persistCache:$('persistCacheBtn'),clearSelectedCache:$('clearSelectedCacheBtn'),cacheStatus:$('cacheStatus'),imageDiagMode:$('imageDiagMode'),imageDiagFirstPass:$('imageDiagFirstPass'),imageDiagKernel:$('imageDiagKernel'),imageDiagResult:$('imageDiagResult'),imageDiagDetail:$('imageDiagDetail'),generateImage:$('generateImageBtn'),stopImage:$('stopImageBtn'),clearImage:$('clearImageBtn'),
+  imageStatus:$('imageStatus'),imageProgressBar:$('imageProgressBar'),imageProgressText:$('imageProgressText'),
+  imageCanvas:$('imageCanvas'),imageCanvasWrap:$('imageCanvasWrap'),imageMeta:$('imageMeta')
+};
+
+let webllm=null, engine=null, abortController=null, loadedModel='', generating=false;
+let ortWebGPU=null, hfTransformers=null, imageRuntimeValidated=false, imageGenerating=false, imageStopRequested=false, sdTokenizer=null, sdTokenizer2=null, sdTokenizerModelId=null;
+let sdModels={text_encoder:null,text_encoder_2:null,unet:null,vae_decoder:null};
+let sdLoadedModelId=null;
+let imageLoadPromise=null;
+let sdSpatialWidth=0,sdSpatialHeight=0;
+let modelCatalog=[], builtInCatalog=[], filteredCatalog=[], importedCatalog=null, chatHistory=[], referenceFiles=[], chatImages=[];
+
+function log(msg){
+  const t=new Date().toLocaleTimeString();
+  ui.log.textContent+=`[${t}] ${msg}\n`;
+  ui.log.scrollTop=ui.log.scrollHeight;
+}
+function setStatus(msg){ui.status.textContent=msg;log(msg)}
+function fmtMB(n){return Number.isFinite(n)?`${n.toFixed(1)} MB`:'—'}
+function fmtBytes(n){
+  if(n<1024)return `${n} B`;
+  if(n<1048576)return `${(n/1024).toFixed(1)} KB`;
+  return `${(n/1048576).toFixed(1)} MB`;
+}
+function fmtVRAM(mb){return Number.isFinite(mb)?(mb>=1024?`${(mb/1024).toFixed(2)} GB`:`${Math.round(mb)} MB`):'Unknown'}
+function updateHeap(){
+  const pm=performance.memory;
+  ui.heap.textContent=pm&&pm.usedJSHeapSize?fmtMB(pm.usedJSHeapSize/1048576):'Not exposed';
+}
+setInterval(updateHeap,1000); updateHeap();
+
+function appendMessage(role,text){
+  const div=document.createElement('div');
+  div.className=`msg ${role}`;
+  const who=document.createElement('span');
+  who.className='who';who.textContent=role==='user'?'You':role==='assistant'?'Local model':'TGAI';
+  div.appendChild(who);
+  const body=document.createElement('span');
+  body.className='msgBody';body.textContent=text;
+  div.appendChild(body);
+  if(role==='assistant'){
+    const tools=document.createElement('div');tools.className='msgTools';
+    const copy=document.createElement('button');copy.className='copyMsg';copy.textContent='Copy response';
+    copy.addEventListener('click',async()=>{
+      try{await navigator.clipboard.writeText(body.textContent);copy.textContent='Copied';setTimeout(()=>copy.textContent='Copy response',1000)}
+      catch(e){log(`Copy failed: ${e.message||e}`)}
+    });
+    tools.appendChild(copy);div.appendChild(tools);
+  }
+  ui.chat.appendChild(div);
+  ui.chat.scrollTop=ui.chat.scrollHeight;
+  return div;
+}
+function setMessageText(div,text){
+  const body=div.querySelector('.msgBody');
+  if(body)body.textContent=text;
+  else{
+    while(div.childNodes.length>1)div.removeChild(div.lastChild);
+    div.appendChild(document.createTextNode(text));
+  }
+  ui.chat.scrollTop=ui.chat.scrollHeight;
+}
+function updateSessionMetrics(){
+  ui.turns.textContent=String(chatHistory.filter(x=>x.role==='user').length);
+  ui.refs.textContent=String(buildReferenceContext().length);
+}
+
+function adapterLabel(adapter){
+  if(!adapter)return 'null';
+  try{
+    const i=adapter.info||{};
+    return i.description||i.device||i.vendor||'adapter returned';
+  }catch{return 'adapter returned'}
+}
+async function requestAdapterSafe(options){
+  try{
+    const a=await navigator.gpu.requestAdapter(options);
+    return {ok:!!a,adapter:a,label:adapterLabel(a),error:''};
+  }catch(err){
+    return {ok:false,adapter:null,label:'error',error:String(err?.message||err)};
+  }
+}
+async function probeWebGPU(showStatus=true){
+  if(!navigator.gpu){
+    const msg='navigator.gpu is not exposed by this browser/context.';
+    ui.gpuProbeSummary.textContent='Unavailable';
+    ui.gpuProbeOutput.textContent=msg;
+    if(showStatus)setStatus(msg);
+    return {ok:false,best:null};
+  }
+  const probes=[
+    ['default',undefined],
+    ['high-performance',{powerPreference:'high-performance'}],
+    ['low-power',{powerPreference:'low-power'}],
+  ];
+  const rows=[];
+  let best=null;
+  for(const [name,opts] of probes){
+    const r=await requestAdapterSafe(opts);
+    if(!best&&r.ok)best=r.adapter;
+    let detail=`${name}: ${r.ok?'OK':'NO ADAPTER'} — ${r.ok?r.label:(r.error||'requestAdapter returned null')}`;
+    if(r.ok){
+      try{
+        const info=r.adapter.info||{};
+        const bits=[];
+        if(info.vendor)bits.push(`vendor=${info.vendor}`);
+        if(info.architecture)bits.push(`arch=${info.architecture}`);
+        if(info.device)bits.push(`device=${info.device}`);
+        if(bits.length)detail+=`\n  ${bits.join(' | ')}`;
+        detail+=`\n  shader-f16=${r.adapter.features?.has('shader-f16')?'yes':'no'}`;
+        const maxBuf=r.adapter.limits?.maxStorageBufferBindingSize;
+        if(maxBuf)detail+=` | maxStorageBufferBindingSize=${Math.round(maxBuf/1048576)} MB`;
+      }catch{}
+    }
+    rows.push(detail);
+  }
+  const ok=!!best;
+  ui.gpuProbeSummary.textContent=ok?'Adapter available':'No adapter';
+  ui.gpuProbeOutput.textContent=rows.join('\n\n');
+  log(`GPU probe: ${ok?'at least one adapter returned':'no adapters returned'}.`);
+  if(showStatus)setStatus(ok?'WebGPU adapter probe succeeded. See Adapter Probe for default/high-performance/low-power results.':'WebGPU adapter probe failed for all preferences.');
+  return {ok,best};
+}
+async function inspectWebGPU(){
+  if(!navigator.gpu){
+    ui.badge.textContent='WebGPU unavailable';ui.badge.className='badge bad';
+    ui.webgpu.textContent='Unavailable';ui.adapter.textContent='—';
+    setStatus('This browser does not expose WebGPU. Try a current Chromium-based browser with WebGPU enabled.');
+    return false;
+  }
+  try{
+    // Prefer high performance first now that TGAI is intentionally a GPU-heavy local AI lab.
+    // Fall back to default so the app remains portable.
+    let result=await requestAdapterSafe({powerPreference:'high-performance'});
+    if(!result.ok)result=await requestAdapterSafe();
+    if(!result.ok)throw new Error(result.error||'No WebGPU adapter returned');
+    const adapter=result.adapter;
+    ui.badge.textContent='WebGPU ready';ui.badge.className='badge good';
+    ui.webgpu.textContent='Available';
+    const name=adapterLabel(adapter);
+    ui.adapter.textContent=name.length>34?name.slice(0,31)+'…':name;
+    ui.memory.textContent=navigator.deviceMemory?`${navigator.deviceMemory} GB hint`:'Not exposed';
+    log(`WebGPU adapter is available: ${name}.`);
+    return true;
+  }catch(err){
+    ui.badge.textContent='WebGPU error';ui.badge.className='badge bad';
+    ui.webgpu.textContent='Error';ui.adapter.textContent='—';
+    setStatus(`WebGPU check failed: ${err.message||err}`);
+    return false;
+  }
+}
+
+async function ensureWebLLM(){
+  if(webllm)return webllm;
+  setStatus('Loading WebLLM JavaScript module from CDN…');
+  webllm=await import('https://esm.run/@mlc-ai/web-llm');
+  builtInCatalog=(webllm.prebuiltAppConfig?.model_list||[]).map(m=>({...m,_source:'WebLLM Built-In'}));
+  rebuildModelCatalog();
+  log(`WebLLM module loaded. Built-in model records: ${builtInCatalog.length}`);
+  return webllm;
+}
+
+
+function normalizeCatalogEntry(x){
+  if(!x||typeof x!=='object'||!x.model_id)return null;
+  const m={...x};
+  m._source='Imported Catalog';
+  if(m.status==='reference'||m.reference_only===true)m._referenceOnly=true;
+  return m;
+}
+function rebuildModelCatalog(){
+  const byId=new Map(builtInCatalog.map(m=>[m.model_id,{...m}]));
+  let importedCount=0, customLoadable=0, infoOnly=0;
+  for(const raw of (importedCatalog?.models||[])){
+    const x=normalizeCatalogEntry(raw); if(!x)continue;
+    importedCount++;
+    if(byId.has(x.model_id)){
+      const base=byId.get(x.model_id);
+      byId.set(x.model_id,{...base,...x,_source:'Curated + WebLLM Built-In',_referenceOnly:false});
+    }else if(x.model&&x.model_lib&&!x._referenceOnly){
+      byId.set(x.model_id,{...x,_source:'Custom Loadable'});customLoadable++;
+    }else{
+      byId.set(x.model_id,{...x,_source:'Catalog Reference',_referenceOnly:true});infoOnly++;
+    }
+  }
+  modelCatalog=[...byId.values()];
+  populateModels();
+  if(ui.catalogStatus){
+    ui.catalogStatus.textContent=importedCatalog
+      ? `${importedCatalog.catalog_name||'Imported catalog'}: ${importedCount} entries · ${customLoadable} new loadable custom · ${infoOnly} reference-only. Matching built-ins are enriched in place.`
+      : 'Built-in WebLLM catalog only. Choose a TGAI JSON catalog; after selection it will be read, merged, and the result will be shown here.';
+  }
+}
+async function importModelCatalog(file){
+  if(!file)throw new Error('No catalog file selected.');
+  const text=await new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=()=>resolve(String(reader.result||''));
+    reader.onerror=()=>reject(reader.error||new Error('Could not read catalog file.'));
+    reader.readAsText(file);
+  });
+  let data;
+  try{data=JSON.parse(text)}catch(e){throw new Error(`Invalid JSON: ${e.message}`)}
+  if(!data||!Array.isArray(data.models))throw new Error('Catalog JSON must contain a top-level "models" array.');
+  importedCatalog=data;
+  ui.catalogStatus.textContent=`Parsed ${data.models.length} entries from ${file.name}. Merging with WebLLM…`;
+
+  // Load the live WebLLM catalog now so imported metadata can be merged
+  // against actual built-in model IDs immediately.
+  if(!webllm){
+    ui.catalogStatus.textContent=`Read ${data.models.length} catalog entries. Loading live WebLLM catalog for merge…`;
+    await ensureWebLLM();
+  }else{
+    rebuildModelCatalog();
+  }
+
+  const enriched=modelCatalog.filter(m=>m._source==='Curated + WebLLM Built-In').length;
+  const custom=modelCatalog.filter(m=>m._source==='Custom Loadable').length;
+  const info=modelCatalog.filter(m=>m._referenceOnly).length;
+  const msg=`Loaded "${data.catalog_name||file.name}" — ${data.models.length} entries; ${enriched} matched live WebLLM models, ${custom} custom loadable, ${info} informational.`;
+  ui.catalogStatus.textContent=msg;
+  setStatus(msg);
+  return data;
+}
+function exportImportedCatalog(){
+  const data=importedCatalog||{
+    schema:'tgai-model-catalog-v1',
+    catalog_name:'TGAI Model Catalog',
+    notes:'Add metadata to a WebLLM built-in by model_id, or add a custom loadable model with model_id + model + model_lib.',
+    models:[]
+  };
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='tgai-model-catalog.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+function runtimeModelRecord(m){
+  const keys=['model','model_id','model_lib','vram_required_MB','low_resource_required','required_features','overrides','model_type'];
+  const out={}; for(const k of keys)if(m[k]!==undefined)out[k]=m[k];
+  return out;
+}
+
+function modelTypeName(m){
+  const raw=m?.model_type;
+  const s=String(raw??'').toLowerCase();
+  // WebLLM ModelType enum: LLM=0, embedding=1, VLM=2.
+  if(raw===1||s==='1'||s.includes('embedding')||s.includes('embed'))return 'embedding';
+  if(raw===2||s==='2'||s.includes('vlm')||s.includes('vision'))return 'vision';
+  const id=(m?.model_id||'').toLowerCase();
+  if(id.includes('embed'))return 'embedding';
+  if(id.includes('vision')||id.includes('vlm'))return 'vision';
+  return 'chat';
+}
+function isEmbeddingModel(m){return modelTypeName(m)==='embedding'}
+function isVisionModel(m){return modelTypeName(m)==='vision'}
+function isReasoningModel(m){
+  const hay=[m?.model_id,m?.display_name,m?.category,m?.notes,...(m?.tags||[])]
+    .filter(Boolean).join(' ').toLowerCase();
+  return hay.includes('qwen3')||hay.includes('deepseek-r1')||hay.includes('reasoning');
+}
+function isUsefulChatModel(m){
+  // Keep all runnable model types visible; capability-specific UI decides what actions are valid.
+  return Boolean(m?.model_id);
+}
+function modelFamilyInfo(m){
+  const id=m.model_id||'';
+  const s=id.toLowerCase();
+  let family='General local model',use='General chat, summarization, rewriting, extraction, and experimentation.';
+  if(isEmbeddingModel(m)){family='Embedding / retrieval model';use='Creates numeric text embeddings for semantic similarity, local search, and future RAG. It cannot answer normal chat prompts.'}
+  else if(s.includes('coder')){family='Coding model';use='Best fit for programming, SQL, code explanation, debugging, refactoring, and structured technical work.'}
+  else if(isReasoningModel(m)){family='Reasoning model';use='Useful for multi-step reasoning, analysis, math/code problem solving, and experiments where slower deliberate answers are acceptable. TGAI hides raw <think> reasoning and shows only the final answer.'}
+  else if(s.includes('wizardmath')){family='Math-focused model';use='Primarily useful for mathematical reasoning and quantitative problem solving.'}
+  else if(isVisionModel(m)){family='Vision-language model';use='Can combine an uploaded image with text prompts for image description, visual question answering, screenshot/document inspection, and multimodal experiments.'}
+  else if(s.includes('instruct')||s.includes('-it-')){family='Instruction/chat model';use='Good everyday choice for writing, summarizing, Q&A, brainstorming, extraction, and general office/technical assistance.'}
+  const size=(id.match(/(?:^|[-_])(\d+(?:\.\d+)?)b(?:[-_]|$)/i)||[])[1];
+  if(size)use+=` Model name indicates roughly ${size}B parameters; larger models are usually more capable but slower and more memory hungry.`;
+  if(s.includes('q0'))use+=' q0 indicates a much less aggressively quantized weight representation than q4 variants, trading memory for fidelity.';
+  else if(s.includes('q4'))use+=' q4 indicates 4-bit weight quantization, usually a useful browser tradeoff between size, speed, and fidelity.';
+  return {family,use};
+}
+function assertCatalogUI(){
+  const required=['model','filter','modelInfo','modelFamily','modelUse','modelBadges',
+    'provAvailability','provMetadata','provLoadable','catalogStatus'];
+  const missing=required.filter(k=>!ui[k]);
+  if(missing.length)throw new Error(`TGAI UI wiring error: missing ${missing.join(', ')}`);
+}
+
+function populateModels(){
+  assertCatalogUI();
+  const q=ui.filter.value.trim().toLowerCase();
+  filteredCatalog=modelCatalog
+    .filter(isUsefulChatModel)
+    .filter(m=>!q||[
+      m.model_id,m.display_name,m.category,m.good_for_text,m.notes,m.runtime,...(m.tags||[])
+    ].filter(Boolean).join(' ').toLowerCase().includes(q))
+    .sort((a,b)=>(a.vram_required_MB??999999)-(b.vram_required_MB??999999)||a.model_id.localeCompare(b.model_id));
+
+  const previous=ui.model.value;
+  ui.model.innerHTML='';
+
+  const groups=[
+    ['Recommended / Curated Chat + Vision',m=>m._source==='Curated + WebLLM Built-In'&&!isEmbeddingModel(m)],
+    ['Embedding / Retrieval Models',m=>isEmbeddingModel(m)&&!m._referenceOnly],
+    ['Other WebLLM Chat + Vision Models',m=>m._source==='WebLLM Built-In'&&!isEmbeddingModel(m)],
+    ['Custom Models',m=>m._source==='Custom Loadable'],
+    ['Reference / Other Runtimes',m=>m._referenceOnly]
+  ];
+  for(const [label,test] of groups){
+    const rows=filteredCatalog.filter(test);
+    if(!rows.length)continue;
+    const g=document.createElement('optgroup');g.label=label;
+    for(const m of rows){
+      const opt=document.createElement('option');
+      opt.value=m.model_id;
+      const src=m._referenceOnly?'INFO ONLY':(m._source==='Custom Loadable'?'CUSTOM':(m._source==='Curated + WebLLM Built-In'?'CURATED':''));
+      const kind=isEmbeddingModel(m)?'EMBED':isVisionModel(m)?'VISION':isReasoningModel(m)?'REASONING':'CHAT';
+      opt.textContent=`[${fmtVRAM(m.vram_required_MB)}] ${m.model_id} · ${kind}${src?` · ${src}`:''}`;
+      g.appendChild(opt);
+    }
+    ui.model.appendChild(g);
+  }
+  if([...ui.model.options].some(o=>o.value===previous))ui.model.value=previous;
+  updateModelInfo();
+}
+function selectedRecord(){return modelCatalog.find(m=>m.model_id===ui.model.value)}
+function updateModelInfo(){
+  const m=selectedRecord();
+  if(!m){
+    ui.modelInfo.textContent=filteredCatalog.length?'Select a model.':'No matching built-in chat models.';
+    ui.modelFamily.textContent='Model Explorer';ui.modelUse.textContent='Select a model to see what it is likely to be useful for.';
+    ui.modelBadges.innerHTML='';ui.provAvailability.textContent='—';ui.provMetadata.textContent='—';ui.provLoadable.textContent='—';return
+  }
+  const lr=m.low_resource_required?'lower-resource configuration':'standard-resource configuration';
+  const ctx=m.overrides?.context_window_size?`, context ${m.overrides.context_window_size.toLocaleString()} tokens`:'';
+  const f=m.required_features?.length?`, requires ${m.required_features.join(', ')}`:'';
+  ui.modelInfo.textContent=`Estimated WebLLM VRAM: ${fmtVRAM(m.vram_required_MB)} · ${lr}${ctx}${f}.`;
+
+  const info=modelFamilyInfo(m);
+  ui.modelFamily.textContent=m.display_name||info.family;
+  ui.modelUse.textContent=m.good_for_text||m.notes||info.use;
+  const badges=[];
+  if(isEmbeddingModel(m))badges.push(['EMBEDDING / RAG','code']);
+  else if(isVisionModel(m))badges.push(['VISION / VLM','vision']);
+  else badges.push(['CHAT / LLM','']);
+  if(isReasoningModel(m))badges.push(['REASONING','big']);
+  if((m.model_id||'').toLowerCase().includes('coder'))badges.push(['CODE / SQL','code']);
+  const size=parseFloat(((m.model_id||'').match(/(\d+(?:\.\d+)?)B/i)||[])[1]||'0');
+  if(size>=7)badges.push(['LARGE / SLOWER','big']);
+  badges.push([m.low_resource_required?'LOW RESOURCE':'STANDARD','']);
+  if(m._source==='Curated + WebLLM Built-In')badges.push(['CURATED','sourceCurated']);
+  else if(m._source==='Custom Loadable')badges.push(['CUSTOM','sourceCustom']);
+  else if(m._referenceOnly)badges.push(['INFO ONLY','sourceInfo']);
+  else badges.push(['WEBLLM BUILT-IN','sourceBuiltin']);
+  for(const tag of (m.tags||[]).slice(0,5))badges.push([String(tag).toUpperCase(),'']);
+  const isCurated=m._source==='Curated + WebLLM Built-In';
+  ui.provAvailability.textContent=isCurated||m._source==='WebLLM Built-In'?'WebLLM Built-In':
+    m._source==='Custom Loadable'?'Custom model from imported catalog':
+    (m.runtime||'External / research model');
+  ui.provMetadata.textContent=isCurated?(importedCatalog?.catalog_name||'Imported curated catalog'):
+    m._source==='Custom Loadable'?(importedCatalog?.catalog_name||'Imported catalog'):
+    m._referenceOnly?(importedCatalog?.catalog_name||'Imported research catalog'):'None — live WebLLM record';
+  ui.provLoadable.textContent=m._referenceOnly?'No — informational/requires another runtime':
+    isEmbeddingModel(m)?'Yes — embedding pipeline (not chat)':'Yes — chat/vision pipeline';
+
+  ui.modelBadges.innerHTML='';
+  for(const [txt,cls] of badges){const b=document.createElement('span');b.className=`cap ${cls}`;b.textContent=txt;ui.modelBadges.appendChild(b)}
+  const url=m.info_url||((typeof m.model==='string'&&/^https?:\/\//.test(m.model))?m.model:'https://github.com/mlc-ai/web-llm');
+  ui.modelLink.href=url;ui.modelLink.textContent=url.includes('huggingface.co')?'Model page on Hugging Face ↗':'Model / project info ↗';
+  if(m._referenceOnly)ui.modelInfo.textContent+=' This catalog entry is informational only because it does not provide a compatible WebLLM model_lib.';
+  ui.visionNote.textContent=isEmbeddingModel(m)
+    ? 'Selected model is an EMBEDDING / RETRIEVAL model. It cannot answer chat prompts; it is intended for semantic search and future local RAG.'
+    : isVisionModel(m)
+      ? 'Selected model is marked as vision-capable. Attached images will be included with the next user message.'
+      : 'Selected model appears text-only. Images can be staged here, but they will only be sent when a VISION/VLM model is loaded.';
+}
+
+
+
+async function prepareVisionImage(file,maxSide=768){
+  const raw=await new Promise((resolve,reject)=>{
+    const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=()=>reject(r.error||new Error('Could not read image'));r.readAsDataURL(file);
+  });
+  const img=await new Promise((resolve,reject)=>{
+    const im=new Image();im.onload=()=>resolve(im);im.onerror=()=>reject(new Error('Could not decode image'));im.src=raw;
+  });
+  const ow=img.naturalWidth||img.width, oh=img.naturalHeight||img.height;
+  const scale=Math.min(1,maxSide/Math.max(ow,oh));
+  const w=Math.max(1,Math.round(ow*scale)),h=Math.max(1,Math.round(oh*scale));
+  const c=document.createElement('canvas');c.width=w;c.height=h;
+  c.getContext('2d',{alpha:false}).drawImage(img,0,0,w,h);
+  const dataUrl=c.toDataURL('image/jpeg',0.82);
+  return {dataUrl,width:w,height:h,originalWidth:ow,originalHeight:oh};
+}
+
+function renderChatImages(){
+  ui.chatImageList.innerHTML='';
+  for(const [i,img] of chatImages.entries()){
+    const d=document.createElement('div');d.className='thumb';
+    const im=document.createElement('img');im.src=img.dataUrl;im.alt=img.name;
+    const sm=document.createElement('small');sm.textContent=img.name;
+    const x=document.createElement('button');x.textContent='×';x.title='Remove';
+    x.addEventListener('click',()=>{chatImages.splice(i,1);renderChatImages();refreshContextInspector()});
+    d.append(im,sm,x);ui.chatImageList.appendChild(d);
+  }
+}
+async function addChatImages(files){
+  for(const file of files){
+    if(!file.type.startsWith('image/'))continue;
+    const dataUrl=await new Promise((resolve,reject)=>{
+      const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=()=>reject(r.error);r.readAsDataURL(file);
+    });
+    chatImages.push({name:file.name,type:file.type,size:file.size,dataUrl});
+  }
+  renderChatImages();log(`Chat image attachment(s) staged: ${chatImages.length}.`);
+}
+
+function buildReferenceContext(){
+  if(!ui.includeRefs.checked||!referenceFiles.length)return '';
+  let remaining=Math.max(1000,Number(ui.refLimit.value)||24000);
+  let out='';
+  for(const f of referenceFiles){
+    if(remaining<=0)break;
+    const header=`\n--- LOCAL REFERENCE FILE: ${f.name} ---\n`;
+    if(header.length>=remaining)break;
+    out+=header;remaining-=header.length;
+    const chunk=f.text.slice(0,remaining);
+    out+=chunk;remaining-=chunk.length;
+    if(chunk.length<f.text.length&&remaining>0){
+      const marker='\n[TRUNCATED BY TGAI]\n';
+      out+=marker.slice(0,remaining);remaining-=Math.min(marker.length,remaining);
+    }
+  }
+  return out.trim();
+}
+function buildSystemPrompt(){
+  const ref=buildReferenceContext();
+  const style=ui.responseStyle?.value||'normal';
+  const styleRule =
+    style==='concise'
+      ? 'Keep the response concise. Give the answer/query first, explain only what is necessary, and do not repeat the same query or answer.'
+      : style==='detailed'
+        ? 'Give a detailed answer with useful explanation, but avoid unnecessary repetition.'
+        : 'Give a clear, reasonably concise answer and avoid unnecessary repetition.';
+  const rules=[
+    'You are a concise helpful assistant running locally in TGAI Browser LLM Lab.',
+    `Your currently loaded model identifier is: ${loadedModel||'(no model loaded yet)'}.`,
+    'The runtime is WebLLM and inference is executing locally through browser WebGPU.',
+    styleRule,
+    ui.useHistory.checked ? 'Use the supplied conversation history to maintain context across turns.' : 'Do not assume access to earlier conversation unless it is explicitly present in the current prompt.',
+    ref ? 'The following local reference material was supplied by the user. Treat it as authoritative for questions about its contents. Do not invent missing schema facts.' : ''
+  ];
+  if(ui.referenceOnly.checked){
+    rules.push('REFERENCE-ONLY GROUNDING MODE IS ENABLED. For factual/domain questions, answer only from the supplied local reference material. If the answer is not contained there, explicitly say that the reference material does not contain enough information. Do not substitute general knowledge or invent tables, columns, relationships, APIs, facts, or syntax.');
+  }
+  if(ref)rules.push(ref);
+  return rules.filter(Boolean).join('\n\n');
+}
+
+
+function buildMessagesForPrompt(promptText){
+  const history=ui.useHistory.checked ? chatHistory : [];
+  const text=promptText||ui.prompt.value.trim();
+  const rec=selectedRecord();
+  let userContent=text;
+  if(chatImages.length && isVisionModel(rec)){
+    userContent=[
+      {type:'text',text:text||'Please inspect the attached image(s).'},
+      ...chatImages.map(img=>({
+        type:'image_url',
+        image_url:img.dataUrl
+      }))
+    ];
+  }
+  return [
+    {role:'system',content:buildSystemPrompt()},
+    ...history,
+    {role:'user',content:userContent}
+  ];
+}
+function serializeContext(messages){
+  return messages.map((m,i)=>{
+    const isLast=i===messages.length-1 && m.role==='user';
+    const label=isLast ? 'NEXT USER MESSAGE' : m.role.toUpperCase();
+    let content=m.content;
+    if(Array.isArray(content)){
+      content=content.map(p=>p.type==='image_url'?`[IMAGE ATTACHMENT: ${String(p.image_url||'').slice(0,40)}…]`:p.text||'').join('\n');
+    }
+    content=(content&&content.length)?content:'(empty)';
+    return `[${i+1}] ${label}\n${content}`;
+  }).join('\n\n==============================\n\n');
+}
+function refreshContextInspector(){
+  const prompt=ui.prompt.value.trim();
+  const messages=buildMessagesForPrompt(prompt);
+  const system=messages[0]?.content||'';
+  const hist=messages.slice(1,-1).reduce((n,m)=>{
+    if(Array.isArray(m.content)){
+      return n+m.content.reduce((k,p)=>k+(p.type==='text'?(p.text?.length||0):0),0);
+    }
+    return n+(m.content?.length||0);
+  },0);
+  const lastContent=messages.at(-1)?.content||'';
+  const p=Array.isArray(lastContent)?lastContent.map(x=>x.text||'').join(''):lastContent;
+  const total=messages.reduce((n,m)=>{
+    if(Array.isArray(m.content))return n+m.content.reduce((a,x)=>a+(x.text?.length||0),0);
+    return n+(m.content?.length||0);
+  },0);
+  ui.cSystem.textContent=String(system.length);
+  ui.cHistory.textContent=String(hist);
+  ui.cPrompt.textContent=String(p.length);
+  ui.cTokens.textContent=`~${Math.ceil(total/4).toLocaleString()}`;
+  ui.contextBox.textContent=serializeContext(messages);
+}
+
+
+function setFinishStatus(reason='—',tokens='—',seconds='—',tps='—'){
+  ui.finishReason.textContent=reason;
+  ui.finishTokens.textContent=tokens;
+  ui.finishTime.textContent=seconds;
+  ui.finishTps.textContent=tps;
+}
+function normalizeFinishReason(reason){
+  if(reason==='length')return 'MAX TOKENS';
+  if(reason==='stop')return 'NATURAL STOP';
+  if(reason==='cancelled'||reason==='abort')return 'STOPPED';
+  return reason ? String(reason).toUpperCase() : 'UNKNOWN';
+}
+
+function renderReferences(){
+  ui.refList.innerHTML='';
+  if(!referenceFiles.length){
+    ui.refList.innerHTML='<div class="note">No files loaded.</div>';
+    ui.refPreview.textContent='Reference preview will appear here.';
+    updateSessionMetrics();return;
+  }
+  for(const f of referenceFiles){
+    const d=document.createElement('div');d.className='refItem';
+    const n=document.createElement('span');n.textContent=f.name;
+    const s=document.createElement('span');s.textContent=fmtBytes(f.size);
+    d.append(n,s);ui.refList.appendChild(d);
+  }
+  const ref=buildReferenceContext();
+  ui.refPreview.textContent=ref.slice(0,5000)+(ref.length>5000?'\n… preview truncated …':'');
+  updateSessionMetrics();
+  refreshContextInspector();
+  refreshContextInspector();
+}
+
+async function loadFiles(fileList){
+  for(const file of Array.from(fileList)){
+    try{
+      const text=await file.text();
+      referenceFiles.push({name:file.name,size:file.size,text});
+      log(`Loaded local reference: ${file.name} (${fmtBytes(file.size)})`);
+    }catch(err){log(`Could not read ${file.name}: ${err.message||err}`)}
+  }
+  renderReferences();
+}
+
+async function unload(){
+  if(generating)return;
+  if(engine){
+    try{await engine.unload()}catch(err){log(`Unload warning: ${err.message||err}`)}
+  }
+  engine=null;loadedModel='';
+  ui.send.disabled=true;ui.stop.disabled=true;ui.modelMetric.textContent='None';ui.vram.textContent='—';
+  ui.bar.style.width='0%';ui.loadMetric.textContent='—';ui.tps.textContent='—';ui.genMetric.textContent='—';
+  setStatus('Model unloaded. Browser cache is left intact for faster future loads.');  updateLoadedResources();
+refreshPersistentCacheStatus();
+}
+
+
+async function loadModel(){
+  if(generating)return;
+  ui.load.disabled=true;ui.send.disabled=true;
+  try{
+    if(!await inspectWebGPU())return;
+    const w=await ensureWebLLM();
+    const modelId=ui.model.value;
+    const record=selectedRecord();
+    if(!record)throw new Error(`Selected model is not present in the active catalog: ${modelId}`);
+    if(record._referenceOnly)throw new Error(`"${modelId}" is a catalog reference only. To make it loadable, supply a WebLLM-compatible model URL and model_lib WASM in the catalog.`);
+    if(engine){try{await engine.unload()}catch{} engine=null}
+
+    let lastPct=0;
+    const t0=performance.now();
+    setStatus(`Loading ${modelId}. First load may download a large model…`);
+    const combinedAppConfig={...w.prebuiltAppConfig,model_list:modelCatalog.filter(m=>!m._referenceOnly&&m.model&&m.model_lib).map(runtimeModelRecord)};
+    engine=await w.CreateMLCEngine(modelId,{
+      appConfig:combinedAppConfig,
+      initProgressCallback:(r)=>{
+        const pct=Number.isFinite(r.progress)?Math.max(0,Math.min(1,r.progress))*100:lastPct;
+        lastPct=pct;ui.bar.style.width=`${pct.toFixed(1)}%`;
+        ui.status.textContent=r.text||`Loading… ${pct.toFixed(1)}%`;
+        if(r.text)log(r.text);
+      },
+      logLevel:'INFO'
+    });
+    const sec=(performance.now()-t0)/1000;
+    loadedModel=modelId;
+    ui.modelMetric.textContent=modelId.replace(/-Instruct.*/,'').slice(0,28);
+    ui.vram.textContent=fmtVRAM(record.vram_required_MB);
+    ui.loadMetric.textContent=`${sec.toFixed(1)} s`;
+    ui.bar.style.width='100%';
+    try{
+      if(typeof engine.getGPUVendor==='function'){
+        const vendor=await engine.getGPUVendor();
+        if(vendor){ui.adapter.textContent=String(vendor).slice(0,34);log(`WebLLM reports GPU vendor: ${vendor}`);}
+      }
+    }catch(err){log(`WebLLM GPU vendor query unavailable: ${err.message||err}`)}
+    const embedding=isEmbeddingModel(record);
+    ui.send.disabled=embedding;
+    if(embedding){
+      setStatus(`Ready. ${modelId} is loaded as an embedding/retrieval model. Normal chat is disabled because this model produces vectors, not conversational answers.`);
+      appendMessage('system',`Loaded embedding model ${modelId}. Chat Send is disabled. This model is intended for semantic search / future local RAG.`);
+    }else{
+      setStatus(`Ready. ${modelId} is loaded locally. Existing chat history will be supplied to this model.`);
+      appendMessage('system',`Loaded ${modelId}. Conversation history: ${chatHistory.filter(x=>x.role==='user').length} prior turn(s).`);
+    }
+  }catch(err){
+    console.error(err);engine=null;loadedModel='';ui.send.disabled=true;
+    setStatus(`Load failed: ${err.message||err}`);
+  }finally{ui.load.disabled=false}
+}
+
+
+
+
+
+function formatBytes(n){
+  const v=Number(n);
+  if(!Number.isFinite(v)||v<0)return '—';
+  if(v<1024)return `${v} B`;
+  const units=['KB','MB','GB','TB'];
+  let x=v/1024,i=0;
+  while(x>=1024&&i<units.length-1){x/=1024;i++}
+  return `${x.toFixed(x>=100?0:x>=10?1:2)} ${units[i]}`;
+}
+function setImageStatus(msg){
+  ui.imageStatus.textContent=msg;
+  log(`Image Lab: ${msg}`);
+}
+function hashSeed(s){
+  let h=2166136261>>>0;
+  for(const ch of String(s)){
+    h^=ch.charCodeAt(0);
+    h=Math.imul(h,16777619);
+  }
+  return h>>>0;
+}
+function seededRandom(seedText){
+  let x=hashSeed(seedText)||0x6d2b79f5;
+  return ()=>{
+    x^=x<<13; x^=x>>>17; x^=x<<5;
+    return (x>>>0)/4294967296;
+  };
+}
+function createRandomSeed(){
+  try{const a=new Uint32Array(1);crypto.getRandomValues(a);return String(a[0]>>>0);}
+  catch{return String((Date.now()^(Math.random()*0xffffffff))>>>0);}
+}
+function chooseImageSeed(){
+  if(ui.imageRandomSeed.checked){const s=createRandomSeed();ui.imageSeed.value=s;return s;}
+  const s=ui.imageSeed.value.trim();if(s)return s;
+  const fallback=createRandomSeed();ui.imageSeed.value=fallback;return fallback;
+}
+const IMAGE_MODEL_CONFIGS={
+  'sd-turbo':{
+    label:'SD-Turbo',
+    architecture:'sd',
+    base:'https://huggingface.co/schmuell/sd-turbo-ort-web/resolve/main',
+    cache:'tgai-sd-turbo-v1',
+    expected:{text_encoder:680,unet:1730,vae_decoder:100},
+    timestepType:'int64',
+    tokenIdType:'int32',
+    vaeScaling:0.18215,
+    steps:[1,2,3,4],
+    defaultSteps:1,
+    minRecommended:1,
+    maxRecommended:4,
+    preferredSize:512
+  },
+  'sdxl-lightning-q4':{
+    label:'SDXL-Lightning Q4 (WebGPU)',
+    architecture:'sdxl',
+    repo:'d0gr/sdxl-lightning-onnx-webgpu-int4',
+    revision:'1011d279d1ca11b62460c324142562a1e0bbb46e',
+    base:'https://huggingface.co/d0gr/sdxl-lightning-onnx-webgpu-int4/resolve/1011d279d1ca11b62460c324142562a1e0bbb46e',
+    tokenizerBase:'https://huggingface.co/d0gr/sdxl-lightning-onnx-webgpu-int4/resolve/1011d279d1ca11b62460c324142562a1e0bbb46e',
+    cache:'tgai-sdxl-lightning-q4-v1',
+    componentPaths:{
+      text_encoder:'text_encoder/model.onnx',
+      text_encoder_2:'text_encoder_2/model.onnx',
+      unet:'unet/model_q4.onnx',
+      vae_decoder:'vae_decoder/model.onnx'
+    },
+    expected:{text_encoder:1,text_encoder_2:2,unet:5,vae_decoder:1},
+    externalData:{
+      text_encoder:[{path:'model.onnx_data',source:'text_encoder/model.onnx_data',expectedMB:235}],
+      text_encoder_2:[{path:'model.onnx_data',source:'text_encoder_2/model.onnx_data',expectedMB:1325}],
+      unet:[{path:'model_q4.onnx_data',source:'unet/model_q4.onnx_data',expectedMB:1772}],
+      vae_decoder:[{path:'model.onnx_data',source:'vae_decoder/model.onnx_data',expectedMB:95}]
+    },
+    timestepType:'int64',
+    tokenIdType:'int32',
+    tokenIdType2:'int64',
+    vaeScaling:0.13025,
+    steps:[4],
+    defaultSteps:4,
+    minRecommended:4,
+    maxRecommended:4,
+    preferredSize:1024
+  },
+  'sd21':{
+    label:'Stable Diffusion 2.1 Base — Legacy',
+    architecture:'sd',
+    base:'https://huggingface.co/aislamov/stable-diffusion-2-1-base-onnx/resolve/main',
+    cache:'tgai-sd21-base-v2',
+    expected:{text_encoder:680,unet:1750,vae_decoder:3},
+    timestepType:'float32',
+    tokenIdType:'int32',
+    vaeScaling:0.18215,
+    externalData:{
+      vae_decoder:[
+        {path:'model.onnx_data',source:'vae_decoder/model.onnx_data',expectedMB:98}
+      ]
+    },
+    steps:[5,10,15,20,30],
+    defaultSteps:10,
+    minRecommended:5,
+    maxRecommended:30,
+    preferredSize:512,
+    legacy:true
+  }
+};
+function selectedImageModel(){return IMAGE_MODEL_CONFIGS[ui.imageModel.value]||IMAGE_MODEL_CONFIGS['sd-turbo'];}
+function normalizeImageDimension(v){
+  let n=Math.round((Number(v)||512)/64)*64;
+  n=Math.max(128,Math.min(1024,n));
+  return n;
+}
+function currentImageDimensions(){
+  const width=normalizeImageDimension(ui.imageWidth.value);
+  const height=normalizeImageDimension(ui.imageHeight.value);
+  ui.imageWidth.value=width;ui.imageHeight.value=height;
+  return {width,height};
+}
+function rebuildPassOptions(){
+  const cfg=selectedImageModel();
+  const current=Number(ui.imageSteps.value);
+  ui.imageSteps.innerHTML='';
+  for(const n of cfg.steps){
+    const o=document.createElement('option');
+    o.value=String(n);
+    o.textContent=`${n}${n===cfg.defaultSteps?' · recommended':''}`;
+    ui.imageSteps.appendChild(o);
+  }
+  ui.imageSteps.value=cfg.steps.includes(current)?String(current):String(cfg.defaultSteps);
+}
+function formatStorageBytes(n){
+  if(!Number.isFinite(n))return 'Unknown';
+  const units=['B','KB','MB','GB','TB'];
+  let x=n,u=0;
+  while(x>=1024&&u<units.length-1){x/=1024;u++;}
+  return `${x.toFixed(u>=3?2:1)} ${units[u]}`;
+}
+async function cacheHasModel(cacheName){
+  try{
+    if(!('caches' in window))return {supported:false,count:0};
+    const exists=await caches.has(cacheName);
+    if(!exists)return {supported:true,count:0};
+    const cache=await caches.open(cacheName);
+    const keys=await cache.keys();
+    return {supported:true,count:keys.length};
+  }catch{return {supported:false,count:0};}
+}
+async function refreshPersistentCacheStatus(){
+  try{
+    ui.cacheOrigin.textContent=location.protocol==='file:'?'file:// local document':location.origin;
+    if(navigator.storage?.estimate){
+      const est=await navigator.storage.estimate();
+      ui.cacheUsage.textContent=formatStorageBytes(est.usage);
+      ui.cacheQuota.textContent=formatStorageBytes(est.quota);
+    }else{
+      ui.cacheUsage.textContent='Not exposed';
+      ui.cacheQuota.textContent='Not exposed';
+    }
+    if(navigator.storage?.persisted){
+      const yes=await navigator.storage.persisted();
+      ui.cachePersistence.textContent=yes?'Persistent':'Best effort';
+    }else{
+      ui.cachePersistence.textContent='Not supported';
+    }
+    const turbo=await cacheHasModel(IMAGE_MODEL_CONFIGS['sd-turbo'].cache);
+    const sdxl=await cacheHasModel(IMAGE_MODEL_CONFIGS['sdxl-lightning-q4'].cache);
+    const sd21=await cacheHasModel(IMAGE_MODEL_CONFIGS['sd21'].cache);
+    ui.cacheSdTurbo.textContent=turbo.supported?(turbo.count?`Cached · ${turbo.count} file${turbo.count===1?'':'s'}`:'Not cached'):'Cache API unavailable';
+    ui.cacheSdxl.textContent=sdxl.supported?(sdxl.count?`Cached · ${sdxl.count} file${sdxl.count===1?'':'s'}`:'Not cached'):'Cache API unavailable';
+    ui.cacheSd21.textContent=sd21.supported?(sd21.count?`Cached · ${sd21.count} file${sd21.count===1?'':'s'}`:'Not cached'):'Cache API unavailable';
+    ui.cacheStatus.textContent='Cache status refreshed.';
+  }catch(err){
+    ui.cacheStatus.textContent=`Cache status error: ${err.message||err}`;
+  }
+}
+async function requestPersistentStorage(){
+  if(!navigator.storage?.persist){
+    ui.cacheStatus.textContent='Persistent-storage requests are not supported in this browser context.';
+    return;
+  }
+  try{
+    const granted=await navigator.storage.persist();
+    ui.cacheStatus.textContent=granted
+      ? 'Persistent storage granted for this browser origin. Automatic eviction risk for cached model files is reduced.'
+      : 'Persistent storage was not granted. Cached model files remain best-effort and may still be evicted under storage pressure.';
+    await refreshPersistentCacheStatus();
+  }catch(err){
+    ui.cacheStatus.textContent=`Persistent-storage request failed: ${err.message||err}`;
+  }
+}
+async function clearSelectedModelCache(){
+  const cfg=selectedImageModel();
+  if(sdLoadedModelId===ui.imageModel.value){
+    ui.cacheStatus.textContent=`Unload ${cfg.label} before clearing its disk cache.`;
+    return;
+  }
+  try{
+    if(!('caches' in window)){
+      ui.cacheStatus.textContent='Cache API is unavailable in this browser context.';
+      return;
+    }
+    const existed=await caches.delete(cfg.cache);
+    ui.cacheStatus.textContent=existed?`${cfg.label} browser cache cleared. It will download again next load.`:`No ${cfg.label} cache was present.`;
+    await refreshPersistentCacheStatus();
+  }catch(err){
+    ui.cacheStatus.textContent=`Could not clear ${cfg.label} cache: ${err.message||err}`;
+  }
+}
+
+function updateLoadedResources(){
+  ui.resChat.textContent=engine?(loadedModel||ui.model.value||'Loaded'):'Unloaded';
+  const cfg=sdLoadedModelId?IMAGE_MODEL_CONFIGS[sdLoadedModelId]:null;
+  ui.resImage.textContent=cfg?cfg.label:'Unloaded';
+  ui.resSize.textContent=(sdSpatialWidth&&sdSpatialHeight)?`${sdSpatialWidth} × ${sdSpatialHeight}`:'—';
+  ui.resTextEncoder.textContent=sdModels.text_encoder_2?'2 Resident':(sdModels.text_encoder?'Resident':'Unloaded');
+  ui.resUnet.textContent=sdModels.unet?'Resident':'Unloaded';
+  ui.resVae.textContent=sdModels.vae_decoder?'Resident':'Unloaded';
+  ui.resCache.textContent=sdLoadedModelId?'Model files retained in browser disk cache':'Browser cache retained between loads';
+  ui.unloadImageRuntime.disabled=!sdModels.text_encoder&&!sdModels.unet&&!sdModels.vae_decoder;
+}
+async function releaseSpatialImageSessions(){
+  for(const name of ['unet','vae_decoder']){
+    try{if(sdModels[name]&&typeof sdModels[name].release==='function')await sdModels[name].release();}
+    catch(err){log(`Could not release ${name}: ${err.message||err}`)}
+    sdModels[name]=null;
+  }
+  sdSpatialWidth=0;sdSpatialHeight=0;
+  updateLoadedResources();
+}
+async function releaseAllImageSessions(){
+  await releaseSpatialImageSessions();
+  for(const name of ['text_encoder','text_encoder_2']){
+    try{if(sdModels[name]&&typeof sdModels[name].release==='function')await sdModels[name].release();}catch{}
+    sdModels[name]=null;
+  }
+  sdLoadedModelId=null;
+  imageRuntimeValidated=false;
+  updateLoadedResources();
+}
+
+function randnLatents(shape,sigma,seedText){
+  const rand=seededRandom(seedText);
+  const size=shape.reduce((a,b)=>a*b,1);
+  const data=new Float32Array(size);
+  for(let i=0;i<size;i+=2){
+    let u=Math.max(rand(),1e-12),v=rand();
+    const r=Math.sqrt(-2*Math.log(u));
+    data[i]=r*Math.cos(2*Math.PI*v)*sigma;
+    if(i+1<size)data[i+1]=r*Math.sin(2*Math.PI*v)*sigma;
+  }
+  return data;
+}
+async function fetchModelBytes(url,label,expectedMB,cacheName='tgai-image-model-v1'){
+  // Cache Storage works on normal hosted origins. file:// may not expose it;
+  // the function transparently falls back to a streamed network fetch.
+  let cached=null,cache=null;
+  try{
+    if('caches' in window){
+      cache=await caches.open(cacheName);
+      cached=await cache.match(url);
+    }
+  }catch(err){log(`Image cache unavailable for ${label}: ${err.message||err}`)}
+  if(cached){
+    ui.imageProgressText.textContent=`${label} · cached · reading into memory…`;
+    setImageStatus(`Loading ${label} from browser cache…`);
+    return await cached.arrayBuffer();
+  }
+
+  setImageStatus(`Downloading ${label}…`);
+  const resp=await fetch(url,{cache:'default'});
+  if(!resp.ok)throw new Error(`${label} download failed: HTTP ${resp.status}`);
+  const total=Number(resp.headers.get('content-length'))||expectedMB*1024*1024||0;
+
+  if(!resp.body){
+    const ab=await resp.arrayBuffer();
+    try{if(cache)await cache.put(url,new Response(ab.slice(0)));}catch{}
+    return ab;
+  }
+
+  const reader=resp.body.getReader();
+  const chunks=[];
+  let received=0,lastT=performance.now(),lastB=0,rate=0;
+  while(true){
+    const {done,value}=await reader.read();
+    if(done)break;
+    chunks.push(value);
+    received+=value.byteLength;
+    const now=performance.now();
+    if(now-lastT>=500){
+      rate=(received-lastB)/((now-lastT)/1000);
+      lastT=now; lastB=received;
+      const pct=total?Math.min(100,received/total*100):0;
+      ui.imageProgressBar.style.width=`${pct.toFixed(1)}%`;
+      const eta=rate>0&&total>received?(total-received)/rate:null;
+      ui.imageProgressText.textContent=
+        `${label} · ${formatBytes(received)} / ${total?formatBytes(total):'unknown'} · `+
+        `${rate?formatBytes(rate)+'/s':'—'}${eta!==null?` · ETA ${Math.ceil(eta)}s`:''}`;
+    }
+  }
+  const out=new Uint8Array(received);
+  let off=0;
+  for(const c of chunks){out.set(c,off);off+=c.byteLength}
+  try{
+    if(cache)await cache.put(url,new Response(out.slice().buffer));
+  }catch(err){log(`Could not persist ${label} in Cache Storage: ${err.message||err}`)}
+  return out.buffer;
+}
+function scaleModelInputs(ort,t,sigma){
+  const src=t.data;
+  const dst=new Float32Array(src.length);
+  const div=Math.sqrt(sigma*sigma+1);
+  for(let i=0;i<src.length;i++)dst[i]=src[i]/div;
+  return new ort.Tensor('float32',dst,t.dims);
+}
+function buildEulerSchedule(numSteps){
+  const nTrain=1000,b0=0.00085,b1=0.012;
+  const sigTrain=new Float64Array(nTrain);
+  let ac=1;
+  const sb0=Math.sqrt(b0),sb1=Math.sqrt(b1);
+  for(let i=0;i<nTrain;i++){
+    const f=i/(nTrain-1),beta=(sb0+(sb1-sb0)*f)**2;
+    ac*=1-beta;
+    sigTrain[i]=Math.sqrt((1-ac)/ac);
+  }
+  const timesteps=[],sigmas=[];
+  const ratio=nTrain/numSteps;
+  for(let x=nTrain;x>0;x-=ratio){
+    const t=Math.max(0,Math.min(999,Math.round(x)-1));
+    timesteps.push(t);sigmas.push(sigTrain[t]);
+  }
+  while(timesteps.length>numSteps){timesteps.pop();sigmas.pop();}
+  sigmas.push(0);
+  return {timesteps,sigmas};
+}
+function eulerStep(ort,modelOutput,sample,sigma,sigmaNext){
+  const mo=modelOutput.data,sd=sample.data,out=new Float32Array(sd.length);
+  const dt=sigmaNext-sigma;
+  for(let i=0;i<sd.length;i++)out[i]=sd[i]+mo[i]*dt;
+  return new ort.Tensor('float32',out,sample.dims);
+}
+function scaleLatentsForVae(ort,sample,vaeScaling){
+  const sd=sample.data,out=new Float32Array(sd.length);
+  for(let i=0;i<sd.length;i++)out[i]=sd[i]/vaeScaling;
+  return new ort.Tensor('float32',out,sample.dims);
+}
+function drawVaeTensorToCanvas(tensor,canvas){
+  const d=tensor.data;
+  const dims=tensor.dims;
+  if(!dims||dims.length!==4||dims[0]!==1||dims[1]!==3){
+    throw new Error(`Unexpected VAE output shape: ${JSON.stringify(dims)}`);
+  }
+  const h=dims[2],w=dims[3],plane=h*w;
+  canvas.width=w;canvas.height=h;
+  const img=new ImageData(w,h);
+  for(let i=0;i<plane;i++){
+    let r=d[i]/2+0.5,g=d[plane+i]/2+0.5,b=d[2*plane+i]/2+0.5;
+    r=Math.max(0,Math.min(1,r));
+    g=Math.max(0,Math.min(1,g));
+    b=Math.max(0,Math.min(1,b));
+    const j=i*4;
+    img.data[j]=Math.round(r*255);
+    img.data[j+1]=Math.round(g*255);
+    img.data[j+2]=Math.round(b*255);
+    img.data[j+3]=255;
+  }
+  canvas.getContext('2d').putImageData(img,0,0);
+}
+async function loadExternalDataForComponent(cfg,name,base){
+  const defs=cfg.externalData?.[name]||[];
+  if(!defs.length)return [];
+  const files=[];
+  for(const def of defs){
+    const source=def.source||def.path;
+    const url=`${base}/${source}`;
+    ui.resCache.textContent=`Checking ${cfg.label} external weights cache…`;
+    ui.cacheStatus.textContent=`Checking ${cfg.label} · ${source} disk cache…`;
+    const data=await fetchModelBytes(
+      url,
+      `${cfg.label} · ${source}`,
+      def.expectedMB||0,
+      cfg.cache
+    );
+    files.push({path:def.path,data});
+    log(`${name} external data ready: ${def.path} (${formatBytes(data.byteLength)}).`);
+  }
+  return files;
+}
+
+function imageDiagnosticEnabled(){
+  return ui.imageCompatMode?.value==='diagnostic';
+}
+function resetImageCompatibilityDiagnostics(){
+  ui.imageDiagMode.textContent=imageDiagnosticEnabled()?'Diagnostic':'Normal';
+  ui.imageDiagFirstPass.textContent='Not tested';
+  ui.imageDiagKernel.textContent='Not tested';
+  ui.imageDiagResult.textContent='—';
+  ui.imageDiagDetail.textContent=imageDiagnosticEnabled()
+    ? 'Verbose ONNX Runtime diagnostics enabled. TGAI will classify the first U-Net failure if one occurs.'
+    : 'Normal mode. Switch to Diagnostic to capture verbose ORT/WebGPU compatibility information.';
+}
+function classifyImageRuntimeFailure(err,stage='generation'){
+  const msg=String(err?.message||err||'');
+  if(/BiasSplitGelu/i.test(msg)&&/Invalid ShaderModule|compute pipeline/i.test(msg)){
+    return {
+      kind:'BiasSplitGelu WebGPU shader rejection',
+      detail:'The legacy SD 2.1 U-Net reached ONNX Runtime WebGPU execution, but Edge/Dawn rejected the generated BiasSplitGelu compute shader. This points to a model/export + ORT WebGPU kernel compatibility issue rather than prompt, scheduler, timestep, or model-download failure.'
+    };
+  }
+  if(/Invalid ShaderModule|compute pipeline/i.test(msg)){
+    return {
+      kind:'WebGPU shader/pipeline rejection',
+      detail:`A WebGPU compute shader failed during ${stage}. The model loaded, but the current ORT WebGPU + browser/GPU backend could not compile one of its kernels.`
+    };
+  }
+  if(/Unexpected input data type/i.test(msg)){
+    const actual=(msg.match(/Actual:\s*\(tensor\(([^)]+)\)\)/i)||[])[1];
+    const expected=(msg.match(/expected:\s*\(tensor\(([^)]+)\)\)/i)||[])[1];
+    return {
+      kind:'Model input type mismatch',
+      detail:actual&&expected
+        ? `A model input tensor was ${actual}, but this ONNX graph expects ${expected}.`
+        : 'The model expected a different tensor datatype for one of its inputs.'
+    };
+  }
+  if(/external data|onnx_data|MountedFiles/i.test(msg)){
+    return {kind:'Split ONNX external-data failure',detail:'A companion ONNX weight file could not be resolved or mounted.'};
+  }
+  return {kind:'Unclassified runtime failure',detail:msg};
+}
+function recordImageRuntimeFailure(err,stage='generation'){
+  const d=classifyImageRuntimeFailure(err,stage);
+  ui.imageDiagResult.textContent=d.kind;
+  ui.imageDiagDetail.textContent=d.detail;
+  if(/BiasSplitGelu|ShaderModule|compute pipeline/i.test(String(err?.message||err||''))){
+    ui.imageDiagKernel.textContent='FAILED';
+  }
+  log(`Image compatibility diagnosis [${stage}]: ${d.kind} — ${d.detail}`);
+  return d;
+}
+
+
+function requiredImageSessionsReady(cfg){
+  return !!(sdModels.text_encoder && sdModels.unet && sdModels.vae_decoder &&
+    (cfg.architecture!=='sdxl' || sdModels.text_encoder_2));
+}
+async function loadJson(url,label){
+  const r=await fetch(url,{cache:'default'});
+  if(!r.ok)throw new Error(`${label} download failed: HTTP ${r.status} · ${url}`);
+  return await r.json();
+}
+async function loadSdxlTokenizers(cfg){
+  if(sdTokenizerModelId===cfg.repo && sdTokenizer && sdTokenizer2)return;
+  setImageStatus(`Loading ${cfg.label} tokenizers…`);
+  const b=cfg.tokenizerBase||cfg.base||`https://huggingface.co/${cfg.repo}/resolve/main`;
+  const [j1,c1,j2,c2]=await Promise.all([
+    loadJson(`${b}/tokenizer/tokenizer.json`,'SDXL tokenizer 1'),
+    loadJson(`${b}/tokenizer/tokenizer_config.json`,'SDXL tokenizer 1 config'),
+    loadJson(`${b}/tokenizer_2/tokenizer.json`,'SDXL tokenizer 2'),
+    loadJson(`${b}/tokenizer_2/tokenizer_config.json`,'SDXL tokenizer 2 config')
+  ]);
+  sdTokenizer=new hfTransformers.PreTrainedTokenizer(j1,c1);
+  sdTokenizer2=new hfTransformers.PreTrainedTokenizer(j2,c2);
+  sdTokenizerModelId=cfg.repo;
+  log(`${cfg.label} dual tokenizers ready.`);
+}
+async function loadSdTokenizer(){
+  if(sdTokenizerModelId==='sd-clip' && sdTokenizer)return;
+  setImageStatus('Loading CLIP tokenizer…');
+  sdTokenizer=await hfTransformers.AutoTokenizer.from_pretrained('Xenova/clip-vit-base-patch16');
+  if('pad_token_id' in sdTokenizer)sdTokenizer.pad_token_id=0;
+  sdTokenizer2=null;
+  sdTokenizerModelId='sd-clip';
+}
+function tokenArrayFromTokenizerResult(tok){
+  let ids=tok.input_ids?.data ?? tok.input_ids;
+  if(!ids)throw new Error('Tokenizer returned no input_ids.');
+  const a=Array.from(ids,Number).slice(0,77);
+  while(a.length<77)a.push(0);
+  return a;
+}
+async function tokenize77(tokenizer,prompt){
+  const tok=await tokenizer(prompt,{padding:true,max_length:77,truncation:true});
+  return tokenArrayFromTokenizerResult(tok);
+}
+function makeIdTensor(values,type='int32'){
+  if(type==='int64')return new ortWebGPU.Tensor('int64',BigInt64Array.from(values,v=>BigInt(Math.trunc(v))),[1,77]);
+  return new ortWebGPU.Tensor('int32',Int32Array.from(values),[1,77]);
+}
+function sessionInputType(session,inputName='input_ids',fallback='int32'){
+  try{
+    const md=session?.inputMetadata;
+    if(Array.isArray(md)){
+      const hit=md.find(x=>x?.name===inputName)||md[0];
+      if(hit?.type)return hit.type;
+    }else if(md&&typeof md==='object'){
+      const hit=md[inputName];
+      if(hit?.type)return hit.type;
+    }
+  }catch{}
+  return fallback;
+}
+function makeIdTensorForSession(session,values,fallback='int32'){
+  const type=sessionInputType(session,'input_ids',fallback);
+  if(type!=='int32'&&type!=='int64'){
+    throw new Error(`Unsupported text encoder input_ids type "${type}".`);
+  }
+  return makeIdTensor(values,type);
+}
+function findTensorByDims(outputs,dims){
+  for(const [name,t] of Object.entries(outputs||{})){
+    if(t?.dims?.length===dims.length && dims.every((v,i)=>v==null||t.dims[i]===v))return {name,t};
+  }
+  return null;
+}
+function pickPenultimateHidden(outputs,width){
+  const candidates=Object.entries(outputs||{}).filter(([name,t])=>
+    t?.dims?.length===3 && t.dims[0]===1 && t.dims[1]===77 && t.dims[2]===width
+  );
+  if(!candidates.length)return null;
+  const hidden=candidates.filter(([name])=>/hidden_states/i.test(name));
+  if(hidden.length>=2){
+    hidden.sort((a,b)=>{
+      const na=Number((a[0].match(/(\d+)(?!.*\d)/)||[])[1]??-1);
+      const nb=Number((b[0].match(/(\d+)(?!.*\d)/)||[])[1]??-1);
+      return na-nb;
+    });
+    return hidden[Math.max(0,hidden.length-2)][1];
+  }
+  return candidates[0][1];
+}
+function concatSdxlEmbeddings(a,b){
+  if(!a||!b)throw new Error('SDXL text encoder did not return both token embedding tensors.');
+  const seq=77,wa=a.dims[2],wb=b.dims[2];
+  const out=new Float32Array(seq*(wa+wb));
+  const ad=a.data,bd=b.data;
+  for(let s=0;s<seq;s++){
+    const o=s*(wa+wb),ao=s*wa,bo=s*wb;
+    for(let j=0;j<wa;j++)out[o+j]=Number(ad[ao+j]);
+    for(let j=0;j<wb;j++)out[o+wa+j]=Number(bd[bo+j]);
+  }
+  return new ortWebGPU.Tensor('float32',out,[1,seq,wa+wb]);
+}
+function pickSdxlPooled(outputs){
+  const preferred=['text_embeds','pooler_output','pooled_output'];
+  for(const n of preferred){
+    const t=outputs?.[n];
+    if(t?.dims?.length===2 && t.dims[0]===1 && t.dims[1]===1280)return t;
+  }
+  return findTensorByDims(outputs,[1,1280])?.t||null;
+}
+function makeSdxlTimeIds(width,height){
+  // original_size, crop_top_left, target_size
+  return new ortWebGPU.Tensor('float32',Float32Array.from([height,width,0,0,height,width]),[1,6]);
+}
+async function encodeSdxlPrompt(prompt,cfg){
+  if(!sdTokenizer2||!sdModels.text_encoder_2)throw new Error('SDXL dual tokenizer/text-encoder resources are not loaded.');
+  const [ids1,ids2]=await Promise.all([tokenize77(sdTokenizer,prompt),tokenize77(sdTokenizer2,prompt)]);
+  const type1=sessionInputType(sdModels.text_encoder,'input_ids',cfg.tokenIdType||'int32');
+  const type2=sessionInputType(sdModels.text_encoder_2,'input_ids',cfg.tokenIdType2||'int64');
+  log(`SDXL text encoder input types: encoder 1=${type1}, encoder 2=${type2}.`);
+  const t1=makeIdTensorForSession(sdModels.text_encoder,ids1,cfg.tokenIdType||'int32');
+  const t2=makeIdTensorForSession(sdModels.text_encoder_2,ids2,cfg.tokenIdType2||'int64');
+  let e1,e2;
+  try{
+    e1=await sdModels.text_encoder.run({input_ids:t1});
+    e2=await sdModels.text_encoder_2.run({input_ids:t2});
+  }finally{
+    try{t1.dispose?.();t2.dispose?.();}catch{}
+  }
+  if(imageDiagnosticEnabled()){
+    log(`SDXL text_encoder outputs: ${Object.entries(e1).map(([n,t])=>`${n}=${JSON.stringify(t.dims)}`).join(', ')}`);
+    log(`SDXL text_encoder_2 outputs: ${Object.entries(e2).map(([n,t])=>`${n}=${JSON.stringify(t.dims)}`).join(', ')}`);
+  }
+  const h1=pickPenultimateHidden(e1,768);
+  const h2=pickPenultimateHidden(e2,1280);
+  const pooled=pickSdxlPooled(e2);
+  if(!h1||!h2||!pooled){
+    throw new Error(`Could not resolve SDXL conditioning outputs. encoder1=[${Object.keys(e1)}], encoder2=[${Object.keys(e2)}]`);
+  }
+  const hidden=concatSdxlEmbeddings(h1,h2);
+  const pooledCopy=new ortWebGPU.Tensor('float32',Float32Array.from(pooled.data,Number),[1,1280]);
+  for(const outputs of [e1,e2]){
+    for(const t of Object.values(outputs)){try{t.dispose?.();}catch{}}
+  }
+  return {hidden,pooled:pooledCopy};
+}
+
+async function loadImageModel(){
+  if(imageGenerating)return;
+  const selectedCfg=selectedImageModel();
+  const selectedDims=currentImageDimensions();
+
+  if(imageRuntimeValidated &&
+     sdLoadedModelId===ui.imageModel.value &&
+     sdSpatialWidth===selectedDims.width &&
+     sdSpatialHeight===selectedDims.height &&
+     requiredImageSessionsReady(selectedCfg)){
+    setImageStatus(`${selectedCfg.label} at ${selectedDims.width} × ${selectedDims.height} is already loaded. Reusing the existing inference sessions.`);
+    ui.imageProgressText.textContent=`Already loaded · ${selectedCfg.label} · ${selectedDims.width} × ${selectedDims.height}`;
+    updateLoadedResources();
+    return;
+  }
+
+  if(imageLoadPromise){
+    setImageStatus(`Image model load is already in progress. Reusing the active load request instead of starting another.`);
+    return imageLoadPromise;
+  }
+
+  imageLoadPromise=(async()=>{
+  ui.loadImageRuntime.disabled=true;
+  ui.generateImage.disabled=true;
+  ui.imageProgressBar.style.width='2%';
+  ui.imageProgressText.textContent=`Starting ${selectedImageModel().label} load…`;
+  resetImageCompatibilityDiagnostics();
+
+  try{
+    if(!await inspectWebGPU())throw new Error('WebGPU is not currently available.');
+
+    const probe=await requestAdapterSafe({powerPreference:'high-performance'});
+    if(!probe.ok)throw new Error(probe.error||'High-performance WebGPU adapter request returned null.');
+    if(!probe.adapter.features?.has('shader-f16')){
+      throw new Error('The selected WebGPU adapter does not expose shader-f16, which the current image-model builds require.');
+    }
+
+    if(engine){
+      setImageStatus('Unloading active WebLLM model to free GPU memory…');
+      await unload();
+    }
+
+    if(!ortWebGPU){
+      setImageStatus('Loading ONNX Runtime Web 1.29.0 WebGPU bundle…');
+      ortWebGPU=await import('https://cdn.jsdelivr.net/npm/onnxruntime-web@1.29.0/dist/ort.webgpu.bundle.min.mjs');
+      ortWebGPU.env.wasm.numThreads=1;
+    }
+    // Logging level is set on every load so switching diagnostic mode does not require a page reload.
+    if(ortWebGPU?.env){
+      try{ortWebGPU.env.logLevel=imageDiagnosticEnabled()?'verbose':'warning';}catch(err){log(`Could not set ORT log level: ${err.message||err}`)}
+
+    }
+    if(!hfTransformers){
+      setImageStatus('Loading Hugging Face tokenizer runtime…');
+      hfTransformers=await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1');
+    }
+    const cfg=selectedImageModel();
+    if(cfg.architecture==='sdxl')await loadSdxlTokenizers(cfg);
+    else await loadSdTokenizer();
+
+    const base=cfg.base;
+    if(cfg.revision)log(`${cfg.label} source revision pinned to ${cfg.revision}.`);
+    log(`${cfg.label} fallback input profile: text encoder 1=${cfg.tokenIdType||'int32'}, text encoder 2=${cfg.tokenIdType2||'n/a'}, U-Net timestep=${cfg.timestepType||'int64'}. Runtime session metadata takes precedence when available.`);
+    const {width:requestedWidth,height:requestedHeight}=currentImageDimensions();
+    const latentWidth=requestedWidth/8,latentHeight=requestedHeight/8;
+    if(sdLoadedModelId && sdLoadedModelId!==ui.imageModel.value){
+      setImageStatus(`Switching image model to ${cfg.label}…`);
+      await releaseAllImageSessions();
+    }
+    if((sdSpatialWidth&&sdSpatialWidth!==requestedWidth)||(sdSpatialHeight&&sdSpatialHeight!==requestedHeight)){
+      setImageStatus(`Rebuilding spatial WebGPU sessions for ${requestedWidth} × ${requestedHeight}…`);
+      await releaseSpatialImageSessions();
+    }
+    const defaultPaths={text_encoder:'text_encoder/model.onnx',unet:'unet/model.onnx',vae_decoder:'vae_decoder/model.onnx'};
+    const paths={...defaultPaths,...(cfg.componentPaths||{})};
+    const componentNames=cfg.architecture==='sdxl'
+      ? ['text_encoder','text_encoder_2','unet','vae_decoder']
+      : ['text_encoder','unet','vae_decoder'];
+    const defs=componentNames.map(name=>[name,paths[name],cfg.expected[name]||1]);
+
+    const sessionBase={
+      executionProviders:['webgpu'],
+      enableMemPattern:false,
+      logSeverityLevel:imageDiagnosticEnabled()?0:2,
+      logVerbosityLevel:imageDiagnosticEnabled()?4:0,
+      enableCpuMemArena:false,
+      extra:{session:{
+        disable_prepacking:'1',
+        use_device_allocator_for_initializers:'1',
+        use_ort_model_bytes_directly:'1',
+        use_ort_model_bytes_for_initializers:'1'
+      }}
+    };
+
+    for(let i=0;i<defs.length;i++){
+      const [name,path,mb]=defs[i];
+      if(sdModels[name])continue;
+      ui.resCache.textContent=`Checking ${cfg.label} browser cache…`;
+      ui.cacheStatus.textContent=`Checking ${cfg.label} disk cache before network download…`;
+      const bytes=await fetchModelBytes(`${base}/${path}`,`${cfg.label} · ${path}`,mb,cfg.cache);
+      ui.imageProgressText.textContent=`${path} · creating WebGPU inference session…`;
+      setImageStatus(`Initializing ${name} on WebGPU…`);
+      const opt={...sessionBase};
+      const externalData=await loadExternalDataForComponent(cfg,name,base);
+      if(externalData.length){
+        opt.externalData=externalData;
+        ui.imageProgressText.textContent=`${path} + ${externalData.map(x=>x.path).join(', ')} · creating WebGPU inference session…`;
+        setImageStatus(`Initializing ${name} with ${externalData.length} external weight file${externalData.length===1?'':'s'} on WebGPU…`);
+      }
+      if(cfg.architecture!=='sdxl'){
+        if(name==='unet'){
+          opt.freeDimensionOverrides={batch_size:1,num_channels:4,height:latentHeight,width:latentWidth,sequence_length:77};
+        }else if(name==='text_encoder'){
+          opt.freeDimensionOverrides={batch_size:1};
+        }else{
+          opt.freeDimensionOverrides={batch_size:1,num_channels_latent:4,height_latent:latentHeight,width_latent:latentWidth};
+        }
+      }
+      const t0=performance.now();
+      sdModels[name]=await ortWebGPU.InferenceSession.create(bytes,opt);
+      log(`${name} WebGPU session ready in ${((performance.now()-t0)/1000).toFixed(1)}s.`);
+      try{
+        const md=sdModels[name].inputMetadata;
+        if(md){
+          const rows=Array.isArray(md)
+            ? md.map(x=>`${x.name}:${x.type}${x.shape?` ${JSON.stringify(x.shape)}`:''}`)
+            : Object.entries(md).map(([k,x])=>`${k}:${x?.type||'?'}${x?.shape?` ${JSON.stringify(x.shape)}`:''}`);
+          if(rows.length)log(`${name} inputs: ${rows.join(', ')}`);
+        }
+      }catch{}
+      updateLoadedResources();
+      ui.imageProgressBar.style.width=`${Math.round((i+1)/defs.length*100)}%`;
+      // Let temporary model bytes become collectible between session creations.
+      await new Promise(r=>setTimeout(r,0));
+    }
+
+    sdLoadedModelId=ui.imageModel.value;
+    sdSpatialWidth=requestedWidth;sdSpatialHeight=requestedHeight;
+    imageRuntimeValidated=true;
+    ui.imageProgressBar.style.width='100%';
+    ui.imageProgressText.textContent=`${cfg.label} ready · ${requestedWidth} × ${requestedHeight} · tokenizer${cfg.architecture==='sdxl'?'s + 2 text encoders':' + text encoder'} + U-Net + VAE decoder loaded.`;
+    ui.generateImage.disabled=false;
+    setImageStatus(`${cfg.label} ready at ${requestedWidth} × ${requestedHeight}. U-Net timestep type: ${cfg.timestepType||'int64'}. Enter a prompt and click Generate Image.`);
+    updateLoadedResources();
+    await refreshPersistentCacheStatus();
+  }catch(err){
+    imageRuntimeValidated=false;
+    console.error(err);
+    const msg=String(err?.message||err);
+    ui.imageProgressText.textContent=`Load stopped: ${msg}`;
+    if(/external data|onnx_data|MountedFiles/i.test(msg)){
+      setImageStatus(`Image model load failed while resolving split ONNX external weights: ${msg}`);
+      ui.cacheStatus.textContent='Split ONNX external-data loading failed. TGAI v0038 explicitly supplies model.onnx_data to ONNX Runtime Web; if this persists, the model package likely needs a browser-specific conversion.';
+    }else{
+      setImageStatus(`Image model load failed: ${msg}`);
+    }
+  }finally{
+    ui.loadImageRuntime.disabled=false;
+    ui.generateImage.disabled=!imageRuntimeValidated;
+    imageLoadPromise=null;
+    refreshPersistentCacheStatus();
+  }
+  })();
+  return imageLoadPromise;
+}
+async function unloadImageModel(){
+  if(imageGenerating)return;
+  ui.unloadImageRuntime.disabled=true;
+  ui.generateImage.disabled=true;
+  setImageStatus('Releasing image inference sessions from CPU/GPU memory…');
+  await releaseAllImageSessions();
+  ui.imageProgressBar.style.width='0%';
+  ui.imageProgressText.textContent='Image inference sessions unloaded. Cached model files were kept in browser storage for faster reload.';
+  setImageStatus('Image model unloaded from inference memory. Browser disk cache was preserved.');
+  updateLoadedResources();
+}
+
+function requestImageStop(){
+  if(!imageGenerating)return;
+  imageStopRequested=true;
+  ui.stopImage.disabled=true;
+  setImageStatus('Stop requested. TGAI will stop at the next safe WebGPU boundary after the current operation finishes.');
+  ui.imageProgressText.textContent='Stop requested · waiting for current GPU operation to finish safely…';
+}
+function throwIfImageStopRequested(){
+  if(!imageStopRequested)return;
+  const err=new Error('Stopped by user');
+  err.name='ImageGenerationStopped';
+  throw err;
+}
+
+function makeTimestepTensor(cfg,timestep){
+  const type=cfg.timestepType||'int64';
+  if(type==='float32'){
+    return new ortWebGPU.Tensor('float32',Float32Array.from([Number(timestep)]),[1]);
+  }
+  if(type==='int64'){
+    return new ortWebGPU.Tensor('int64',BigInt64Array.from([BigInt(Math.round(Number(timestep)))]),[1]);
+  }
+  throw new Error(`Unsupported timestep tensor type "${type}" for ${cfg.label}.`);
+}
+
+async function generateLocalImage(){
+  if(imageGenerating)return;
+  let cfg=selectedImageModel();
+  if(!imageRuntimeValidated||!sdTokenizer||!requiredImageSessionsReady(cfg)){
+    return setImageStatus('Load the selected image model first.');
+  }
+  const prompt=ui.imagePrompt.value.trim();
+  if(!prompt)return setImageStatus('Enter an image prompt first.');
+  let {width:requestedWidth,height:requestedHeight}=currentImageDimensions();
+  if(sdLoadedModelId!==ui.imageModel.value||sdSpatialWidth!==requestedWidth||sdSpatialHeight!==requestedHeight){
+    setImageStatus(`Preparing ${cfg.label} at ${requestedWidth} × ${requestedHeight} before generation…`);
+    await loadImageModel();
+    if(!imageRuntimeValidated||
+       sdLoadedModelId!==ui.imageModel.value||
+       sdSpatialWidth!==requestedWidth||
+       sdSpatialHeight!==requestedHeight){
+      return setImageStatus(`Could not prepare ${cfg.label} at ${requestedWidth} × ${requestedHeight}. See the load status above.`);
+    }
+    cfg=selectedImageModel();
+    ({width:requestedWidth,height:requestedHeight}=currentImageDimensions());
+  }
+  const numSteps=Number(ui.imageSteps.value)||cfg.defaultSteps;
+
+  imageGenerating=true;
+  imageStopRequested=false;
+  ui.generateImage.disabled=true;
+  ui.stopImage.disabled=false;
+  ui.loadImageRuntime.disabled=true;
+  ui.imageProgressBar.style.width='5%';
+  const seed=chooseImageSeed();
+  const tAll=performance.now();
+
+  let hidden=null,pooled=null,timeIds=null,latent=null,latentInput=null,unetOut=null,vaeInput=null,vaeOut=null;
+  try{
+    setImageStatus('Tokenizing prompt…');
+    ui.imageProgressText.textContent='Stage 1/4 · CLIP tokenizer';
+    throwIfImageStopRequested();
+
+    setImageStatus('Encoding prompt…');
+    ui.imageProgressBar.style.width='20%';
+    if(cfg.architecture==='sdxl'){
+      ui.imageProgressText.textContent='Stage 2/4 · SDXL dual CLIP text encoders';
+      const cond=await encodeSdxlPrompt(prompt,cfg);
+      hidden=cond.hidden;
+      pooled=cond.pooled;
+      timeIds=makeSdxlTimeIds(requestedWidth,requestedHeight);
+    }else{
+      ui.imageProgressText.textContent='Stage 2/4 · CLIP text encoder';
+      const idArr=await tokenize77(sdTokenizer,prompt);
+      const inputIds=makeIdTensorForSession(sdModels.text_encoder,idArr,cfg.tokenIdType||'int32');
+      const enc=await sdModels.text_encoder.run({input_ids:inputIds});
+      try{inputIds.dispose?.();}catch{}
+      hidden=enc.last_hidden_state||enc[Object.keys(enc)[0]];
+      if(!hidden)throw new Error('Text encoder returned no hidden-state tensor.');
+    }
+    throwIfImageStopRequested();
+
+    const vaeScaling=cfg.vaeScaling||0.18215;
+    const latentWidth=requestedWidth/8,latentHeight=requestedHeight/8;
+    const latentShape=[1,4,latentHeight,latentWidth];
+    const schedule=buildEulerSchedule(numSteps);
+    latent=new ortWebGPU.Tensor('float32',randnLatents(latentShape,schedule.sigmas[0],seed),latentShape);
+
+    setImageStatus(`Running ${cfg.label} · ${numSteps} pass${numSteps===1?'':'es'} on WebGPU…`);
+    for(let step=0;step<numSteps;step++){
+      throwIfImageStopRequested();
+      const sigma=schedule.sigmas[step],sigmaNext=schedule.sigmas[step+1],t=schedule.timesteps[step];
+      latentInput=scaleModelInputs(ortWebGPU,latent,sigma);
+      ui.imageProgressBar.style.width=`${25+Math.round((step/numSteps)*50)}%`;
+      ui.imageProgressText.textContent=`Stage 3/4 · U-Net pass ${step+1}/${numSteps} · timestep ${t}`;
+      const timestepTensor=makeTimestepTensor(cfg,t);
+      if(step===0){
+        ui.imageDiagFirstPass.textContent='Running…';
+        ui.imageDiagKernel.textContent='Testing…';
+        ui.imageDiagResult.textContent='—';
+        if(imageDiagnosticEnabled())log(`Diagnostic first U-Net pass: ${cfg.label}, timestep=${t}, tensorType=${cfg.timestepType||'int64'}, latent=${latentWidth}x${latentHeight}.`);
+      }
+      let unetResult;
+      try{
+        const unetFeeds={
+          sample:latentInput,
+          timestep:timestepTensor,
+          encoder_hidden_states:hidden
+        };
+        if(cfg.architecture==='sdxl'){
+          unetFeeds.text_embeds=pooled;
+          unetFeeds.time_ids=timeIds;
+        }
+        unetResult=await sdModels.unet.run(unetFeeds);
+        if(step===0){
+          ui.imageDiagFirstPass.textContent='PASS';
+          ui.imageDiagKernel.textContent='PASS';
+          ui.imageDiagResult.textContent='First U-Net pass completed';
+          ui.imageDiagDetail.textContent='The first U-Net WebGPU execution completed successfully.';
+        }
+      }catch(runErr){
+        if(step===0)ui.imageDiagFirstPass.textContent='FAILED';
+        recordImageRuntimeFailure(runErr,`U-Net pass ${step+1}/${numSteps}`);
+        throw runErr;
+      }finally{
+        try{timestepTensor.dispose?.();}catch{}
+      }
+      throwIfImageStopRequested();
+      unetOut=unetResult.out_sample||unetResult[Object.keys(unetResult)[0]];
+      if(!unetOut)throw new Error('U-Net returned no output tensor.');
+      const nextLatent=eulerStep(ortWebGPU,unetOut,latent,sigma,sigmaNext);
+      try{latent.dispose?.();latentInput.dispose?.();unetOut.dispose?.();}catch{}
+      latent=nextLatent;latentInput=null;unetOut=null;
+      await new Promise(r=>setTimeout(r,0));
+    }
+    throwIfImageStopRequested();
+    vaeInput=scaleLatentsForVae(ortWebGPU,latent,vaeScaling);
+
+    setImageStatus('Decoding latent image with VAE…');
+    ui.imageProgressBar.style.width='75%';
+    ui.imageProgressText.textContent='Stage 4/4 · VAE decoder';
+    const vaeResult=await sdModels.vae_decoder.run({latent_sample:vaeInput});
+    throwIfImageStopRequested();
+    vaeOut=vaeResult.sample||vaeResult[Object.keys(vaeResult)[0]];
+    if(!vaeOut)throw new Error('VAE decoder returned no image tensor.');
+
+    drawVaeTensorToCanvas(vaeOut,ui.imageCanvas);
+    ui.imageCanvasWrap.classList.add('show');
+
+    const sec=(performance.now()-tAll)/1000;
+    ui.imageProgressBar.style.width='100%';
+    ui.imageProgressText.textContent=`Generation complete · ${requestedWidth} × ${requestedHeight} · seed ${seed} · ${sec.toFixed(1)} s`;
+    ui.imageMeta.textContent=`${cfg.label} · ${numSteps} diffusion pass${numSteps===1?'':'es'} · ${requestedWidth} × ${requestedHeight} · seed ${seed} · ${sec.toFixed(1)} s`;
+    setImageStatus(`Image complete in ${sec.toFixed(1)} seconds. Seed ${seed}. ${ui.imageRandomSeed.checked?'A new seed will be chosen automatically next time.':'The fixed seed will reproduce this starting noise.'}`);
+  }catch(err){
+    if(err?.name==='ImageGenerationStopped'){
+      log('Image generation stopped by user.');
+      ui.imageProgressText.textContent='Image generation stopped by user.';
+      setImageStatus('Image generation stopped. The loaded model remains resident and ready for another generation.');
+    }else{
+      console.error(err);
+      if(ui.imageDiagResult.textContent==='—')recordImageRuntimeFailure(err,'generation');
+      ui.imageProgressText.textContent=`Generation stopped: ${err.message||err}`;
+      const d=classifyImageRuntimeFailure(err,'generation');
+      if(d.kind==='BiasSplitGelu WebGPU shader rejection'){
+        setImageStatus(`Image generation failed: ${err.message||err}  |  Diagnosis: SD 2.1 reached the U-Net, but the BiasSplitGelu WebGPU shader was rejected by the current ORT/Edge/Dawn path.`);
+      }else{
+        setImageStatus(`Image generation failed: ${err.message||err}`);
+      }
+    }
+  }finally{
+    for(const t of [hidden,pooled,timeIds,latent,latentInput,unetOut,vaeInput,vaeOut]){
+      try{if(t&&typeof t.dispose==='function')t.dispose()}catch{}
+    }
+    imageGenerating=false;
+    imageStopRequested=false;
+    ui.stopImage.disabled=true;
+    ui.generateImage.disabled=!imageRuntimeValidated;
+    ui.loadImageRuntime.disabled=false;
+  }
+}
+function clearGeneratedImage(){
+  const ctx=ui.imageCanvas.getContext('2d');
+  ctx.clearRect(0,0,ui.imageCanvas.width,ui.imageCanvas.height);
+  ui.imageCanvasWrap.classList.remove('show');
+  ui.imageMeta.textContent='';
+  ui.imageProgressBar.style.width='0%';
+  ui.imageProgressText.textContent=imageRuntimeValidated
+    ? 'SD-Turbo remains loaded and ready.'
+    : 'No image-model transfer active. Click Load Image Model to fetch/cache SD-Turbo.';
+}
+
+function finalAnswerOnly(raw){
+  let s=String(raw||'');
+  // Never expose raw chain-of-thought emitted in common reasoning tags.
+  s=s.replace(/<think>[\s\S]*?<\/think>/gi,'');
+  s=s.replace(/<analysis>[\s\S]*?<\/analysis>/gi,'');
+  // While streaming, an opening tag may not have closed yet.
+  s=s.replace(/<think>[\s\S]*$/gi,'');
+  s=s.replace(/<analysis>[\s\S]*$/gi,'');
+  return s.trimStart();
+}
+function containsHiddenReasoning(raw){
+  return /<(think|analysis)>/i.test(String(raw||''));
+}
+
+function isDisposedRuntimeError(err){
+  const s=String(err?.message||err||'').toLowerCase();
+  return s.includes('already been disposed') ||
+         s.includes('object has been disposed') ||
+         s.includes('device lost') ||
+         s.includes('webgpu') && s.includes('lost');
+}
+function invalidateStaleEngine(reason='Local model runtime became stale or was reclaimed by the browser.'){
+  engine=null;
+  ui.send.disabled=true;
+  ui.stop.disabled=true;
+  ui.load.disabled=false;
+  ui.bar.style.width='0%';
+  setStatus(`${reason} Click Load Model to restore ${loadedModel||'the selected model'}; cached model files should make the reload faster than the first download.`);
+  log(`Runtime invalidated: ${reason}`);
+}
+
+async function generate(){
+  if(!engine||generating)return;
+  const activeRecord=modelCatalog.find(m=>m.model_id===loadedModel);
+  if(isEmbeddingModel(activeRecord)){
+    setStatus('Chat is disabled for embedding models. Select and load a CHAT / VISION model to ask questions.');
+    return;
+  }
+  const prompt=ui.prompt.value.trim();if(!prompt)return;
+  const submittedPrompt=prompt;
+  generating=true;ui.send.disabled=true;ui.load.disabled=true;ui.stop.disabled=false;
+  ui.tps.textContent='—';ui.genMetric.textContent='Running…';setFinishStatus('GENERATING…','—','—','—');
+  abortController=new AbortController();
+  appendMessage('user',prompt + (chatImages.length?`\n[${chatImages.length} image attachment(s)]`:''));
+  const assistantDiv=appendMessage('assistant','…');
+  ui.prompt.value='';
+  const start=performance.now();
+  let full='',usage=null,stopped=false,finishReason=null,outputTokens=null;
+  try{
+    setStatus(`Generating locally with ${chatHistory.filter(x=>x.role==='user').length} prior turn(s) + current message…`);
+    const messages=buildMessagesForPrompt(prompt);
+    const currentUserContent=messages.at(-1)?.content ?? prompt;
+    const sentImageCount=chatImages.length;
+    if(sentImageCount){
+      log(`Sending ${sentImageCount} image attachment(s) to ${loadedModel} using WebLLM image_url multimodal format.`);
+    }
+    chatImages=[];renderChatImages();
+    const stream=await engine.chat.completions.create({
+      messages,temperature:Number(ui.temperature.value),max_tokens:Number(ui.maxTokens.value),stream:true,stream_options:{include_usage:true}
+    });
+    for await(const chunk of stream){
+      if(chunk?.choices?.[0]?.finish_reason) finishReason=chunk.choices[0].finish_reason;
+      if(chunk?.usage?.completion_tokens!=null) outputTokens=chunk.usage.completion_tokens;
+      if(abortController.signal.aborted){stopped=true;break}
+      const delta=chunk.choices?.[0]?.delta?.content||'';
+      full+=delta;
+      const visible=finalAnswerOnly(full);
+      setMessageText(assistantDiv,visible||(containsHiddenReasoning(full)?'Reasoning locally…':'…'));
+      if(chunk.usage)usage=chunk.usage;
+    }
+    const sec=(performance.now()-start)/1000;
+    ui.genMetric.textContent=`${sec.toFixed(2)} s`;
+    const outTokens=outputTokens ?? usage?.completion_tokens ?? null;
+    const tps=Number.isFinite(outTokens)&&sec>0 ? (outTokens/sec) : null;
+    ui.tps.textContent=tps!=null?tps.toFixed(2):'n/a';
+
+    if(stopped && !finishReason) finishReason='cancelled';
+    setFinishStatus(
+      normalizeFinishReason(finishReason || (stopped?'cancelled':'stop')),
+      Number.isFinite(outTokens)?String(outTokens):'—',
+      `${sec.toFixed(1)} sec`,
+      tps!=null?tps.toFixed(1):'—'
+    );
+
+    const finalText=finalAnswerOnly(full);
+    if(finalText){
+      setMessageText(assistantDiv,finalText);
+      chatHistory.push({role:'user',content:currentUserContent},{role:'assistant',content:finalText});
+      updateSessionMetrics();
+    }else if(full&&containsHiddenReasoning(full)){
+      setMessageText(assistantDiv,'The model generated reasoning but did not produce a final answer before generation ended.');
+    }
+    setStatus(stopped?'Generation stopped; any final answer was retained in chat history.':'Generation complete; raw reasoning was hidden and final conversation context retained.');
+  }catch(err){
+    console.error(err);
+    const sec=(performance.now()-start)/1000;
+    const aborted=abortController?.signal?.aborted;
+    const errText=err.message||String(err);
+    const disposed=isDisposedRuntimeError(err);
+
+    if(disposed && !full){
+      // The browser/WebGPU runtime may be reclaimed after a long idle period.
+      // Restore the unsent prompt so the user can reload and retry without retyping.
+      ui.prompt.value=submittedPrompt;
+      invalidateStaleEngine('The WebLLM/WebGPU model runtime was disposed, most likely after the page sat idle.');
+    }
+
+    // Never destroy already-streamed model output because of a UI/diagnostic error.
+    if(full){
+      const finalText=finalAnswerOnly(full);
+      setMessageText(assistantDiv,(finalText||'No final answer was produced.') + `\n\n[Generation ended with an application error: ${errText}]`);
+      if(finalText){
+        chatHistory.push({role:'user',content:currentUserContent},{role:'assistant',content:finalText});
+        updateSessionMetrics();
+      }
+    }else{
+      setMessageText(assistantDiv,disposed
+        ? `The local model runtime was disposed while the page was idle. Your question has been restored below. Click Load Model, then Send again.`
+        : `Error: ${errText}`);
+    }
+
+    setFinishStatus(aborted?'STOPPED':'ERROR',outputTokens??usage?.completion_tokens??'—',`${sec.toFixed(1)} sec`,'—');
+    if(!disposed)setStatus(`Generation ended with an application error: ${errText}`);
+  }finally{
+    generating=false;abortController=null;
+    const active=modelCatalog.find(m=>m.model_id===loadedModel);
+    ui.send.disabled=!engine||isEmbeddingModel(active);
+    ui.load.disabled=false;ui.stop.disabled=true;
+  }
+}
+
+function newChat(){
+  if(generating)return;
+  chatHistory=[];
+  ui.chat.innerHTML='';
+  appendMessage('system',`New chat started${loadedModel?` with ${loadedModel}`:''}. Local reference files are still available.`);
+  updateSessionMetrics();refreshContextInspector();log('Conversation history cleared.');
+}
+function clearDisplay(){
+  ui.chat.innerHTML='';
+  appendMessage('system',`Display cleared. ${chatHistory.filter(x=>x.role==='user').length} chat turn(s) are still retained in memory.`);refreshContextInspector();
+}
+
+
+let hiddenAt=null;
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden){
+    hiddenAt=Date.now();
+    log('Page moved to background; the browser may reclaim WebGPU/model resources during a long idle period.');
+  }else if(hiddenAt){
+    const mins=(Date.now()-hiddenAt)/60000;
+    log(`Page returned after ${mins.toFixed(1)} minute(s) in the background.`);
+    if(engine && mins>=30){
+      setStatus(`Returned after ${mins.toFixed(0)} minutes idle. The loaded model may still work, but some browsers can reclaim WebGPU resources. If you see a disposed-runtime message, simply Load Model again.`);
+    }
+    hiddenAt=null;
+  }
+});
+
+if(!ui.loadImageRuntime){
+  console.error('TGAI startup wiring error: image runtime button was not found.');
+  setStatus('Startup wiring error: image runtime button was not found.');
+}else{
+  log('Image Model button wiring: OK.');
+}
+ui.probeGpu.addEventListener('click',()=>probeWebGPU(true));
+ui.loadImageRuntime.addEventListener('click',()=>{
+  log('Load Image Model clicked.');
+  loadImageModel();
+});
+ui.generateImage.addEventListener('click',generateLocalImage);
+ui.stopImage.addEventListener('click',requestImageStop);
+ui.imageCompatMode.addEventListener('change',resetImageCompatibilityDiagnostics);
+ui.refreshCache.addEventListener('click',refreshPersistentCacheStatus);
+ui.persistCache.addEventListener('click',requestPersistentStorage);
+ui.clearSelectedCache.addEventListener('click',clearSelectedModelCache);
+ui.unloadImageRuntime.addEventListener('click',unloadImageModel);
+ui.randomizeImageSeedBtn.addEventListener('click',()=>{
+  const s=createRandomSeed();ui.imageSeed.value=s;log(`New image seed: ${s}`);
+});
+ui.imageRandomSeed.addEventListener('change',()=>{
+  ui.imageSeed.placeholder=ui.imageRandomSeed.checked?'random each generation':'enter a fixed seed';
+});
+function imageConfigNeedsRebuild(){
+  const {width,height}=currentImageDimensions();
+  return imageRuntimeValidated &&
+    (sdLoadedModelId!==ui.imageModel.value||sdSpatialWidth!==width||sdSpatialHeight!==height);
+}
+function markImageConfigChanged(){
+  const {width,height}=currentImageDimensions();
+  if(imageConfigNeedsRebuild()){
+    // Keep Generate available. generateLocalImage() will rebuild the spatial/model
+    // sessions automatically before generation instead of stranding the button disabled.
+    ui.generateImage.disabled=false;
+    setImageStatus(`Image configuration changed to ${selectedImageModel().label} at ${width} × ${height}. Generate will prepare the new configuration automatically.`);
+  }else if(imageRuntimeValidated){
+    ui.generateImage.disabled=false;
+  }
+}
+ui.imageModel.addEventListener('change',()=>{
+  const cfg=selectedImageModel();
+  rebuildPassOptions();
+  if(cfg.preferredSize){
+    ui.imageWidth.value=cfg.preferredSize;
+    ui.imageHeight.value=cfg.preferredSize;
+    const pv=`${cfg.preferredSize}x${cfg.preferredSize}`;
+    ui.imageSizePreset.value=[...ui.imageSizePreset.options].some(o=>o.value===pv)?pv:'custom';
+  }
+  updateLoadedResources();
+  resetImageCompatibilityDiagnostics();
+  markImageConfigChanged();
+});
+ui.imageSizePreset.addEventListener('change',()=>{
+  if(ui.imageSizePreset.value!=='custom'){
+    const [w,h]=ui.imageSizePreset.value.split('x').map(Number);
+    ui.imageWidth.value=w;ui.imageHeight.value=h;
+  }
+  markImageConfigChanged();
+});
+for(const el of [ui.imageWidth,ui.imageHeight]){
+  el.addEventListener('change',()=>{
+    ui.imageSizePreset.value='custom';
+    currentImageDimensions();
+    markImageConfigChanged();
+  });
+}
+ui.clearImage.addEventListener('click',clearGeneratedImage);
+rebuildPassOptions();
+ui.load.addEventListener('click',loadModel);
+ui.send.addEventListener('click',generate);
+ui.stop.addEventListener('click',()=>{
+  if(abortController){abortController.abort();log('Stop requested.')}
+  try{engine?.interruptGenerate?.()}catch{}
+});
+ui.newChat.addEventListener('click',newChat);
+ui.unload.addEventListener('click',unload);
+ui.clearDisplay.addEventListener('click',clearDisplay);
+ui.filter.addEventListener('input',populateModels);
+ui.model.addEventListener('change',()=>{
+  updateModelInfo();
+  const r=selectedRecord();
+  if(isEmbeddingModel(r))setStatus('Embedding model selected. You can load it for retrieval experiments, but normal chat will be disabled.');
+  else if(ui.model.value!==loadedModel&&engine)setStatus('A different model is selected. Click Load Model to switch; chat history will be retained.');
+});
+ui.fileInput.addEventListener('change',async e=>{await loadFiles(e.target.files);e.target.value=''});
+ui.clearRefs.addEventListener('click',()=>{referenceFiles=[];renderReferences();log('Reference files cleared.')});
+ui.includeRefs.addEventListener('change',renderReferences);
+ui.refLimit.addEventListener('input',renderReferences);
+ui.prompt.addEventListener('keydown',e=>{
+  if(e.ctrlKey&&e.key==='Enter'){e.preventDefault();generate()}
+});
+
+
+
+
+
+ui.chooseCatalog.addEventListener('click',()=>{
+  // Reset first so choosing the same JSON twice still fires "change".
+  ui.catalogFile.value='';
+  ui.catalogFile.click();
+});
+ui.catalogFile.addEventListener('change',async e=>{
+  const file=e.target.files&&e.target.files[0];
+  if(!file){
+    ui.catalogFileName.textContent='No catalog selected';
+    return;
+  }
+  ui.catalogFileName.textContent=file.name;
+  ui.catalogStatus.textContent=`Reading ${file.name}…`;
+  try{
+    await importModelCatalog(file);
+    ui.catalogFileName.textContent=`Loaded: ${file.name}`;
+  }catch(err){
+    const msg=`Catalog import failed: ${err.message||err}`;
+    ui.catalogStatus.textContent=msg;
+    ui.catalogFileName.textContent=`Failed: ${file.name}`;
+    setStatus(msg);
+    console.error(err);
+  }
+});
+ui.exportCatalog.addEventListener('click',exportImportedCatalog);
+ui.clearCatalog.addEventListener('click',()=>{
+  importedCatalog=null;
+  ui.catalogFile.value='';ui.catalogFileName.textContent='No catalog selected';
+  if(webllm)rebuildModelCatalog();
+  else{modelCatalog=[];populateModels()}
+  log('Imported model catalog cleared.');
+});
+ui.chatImageInput.addEventListener('change',async e=>{
+  const files=[...(e.target.files||[])];
+  for(const file of files){
+    try{
+      const prepared=await prepareVisionImage(file,768);
+      chatImages.push({
+        name:file.name,
+        type:'image/jpeg',
+        dataUrl:prepared.dataUrl,
+        width:prepared.width,height:prepared.height,
+        originalWidth:prepared.originalWidth,originalHeight:prepared.originalHeight
+      });
+      log(`Prepared image "${file.name}": ${prepared.originalWidth}×${prepared.originalHeight} → ${prepared.width}×${prepared.height} for safer VLM inference.`);
+    }catch(err){
+      log(`Could not prepare image "${file.name}": ${err.message||err}`);
+    }
+  }
+  e.target.value='';
+  renderChatImages();
+});
+ui.clearImages.addEventListener('click',()=>{chatImages=[];renderChatImages();log('Chat image attachments cleared.');refreshContextInspector()});
+ui.temperature.addEventListener('input',()=>{
+  ui.temperatureValue.textContent=Number(ui.temperature.value).toFixed(2);
+});
+ui.maxTokens.addEventListener('change',()=>log(`Maximum output tokens set to ${ui.maxTokens.value}.`));
+ui.responseStyle.addEventListener('change',()=>{
+  log(`Response style set to ${ui.responseStyle.value}.`);
+  refreshContextInspector();
+});
+ui.toggleInspector.addEventListener('click',()=>{
+  const open=ui.inspector.classList.toggle('open');
+  ui.toggleInspector.textContent=open?'Hide':'Show';
+  if(open)refreshContextInspector();
+});
+ui.refreshContext.addEventListener('click',refreshContextInspector);
+ui.copyContext.addEventListener('click',async()=>{
+  refreshContextInspector();
+  try{
+    await navigator.clipboard.writeText(ui.contextBox.textContent);
+    log('Context payload copied to clipboard.');
+  }catch(err){log(`Clipboard copy failed: ${err.message||err}`)}
+});
+ui.referenceOnly.addEventListener('change',()=>{
+  if(ui.referenceOnly.checked&&!referenceFiles.length)log('Reference-only mode enabled, but no reference files are loaded.');
+  refreshContextInspector();
+});
+ui.useHistory.addEventListener('change',refreshContextInspector);
+ui.prompt.addEventListener('input',()=>{if(ui.inspector.classList.contains('open'))refreshContextInspector()});
+
+const stagedTests={
+  '1':'Using only the local reference material, write an old-school Oracle SQL query that takes an order number and returns order_number and operating_unit_name. Use comma-separated tables and WHERE predicates. Do not use ANSI JOIN syntax.',
+  '2':'Using the query we have been building, add the order type name while preserving the old-school Oracle join syntax and the :order_number bind variable.',
+  '3':'Using the query we have been building, add the customer name while preserving all existing columns and joins.',
+  '4':'Using the query we have been building, add customer account number and sort by ordered_date descending. Preserve the old-school Oracle join syntax.'
+};
+document.querySelectorAll('[data-test]').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    ui.prompt.value=stagedTests[btn.dataset.test]||'';
+    refreshContextInspector();
+    ui.prompt.focus();
+  });
+});
+
+
+ui.temperatureValue.textContent=Number(ui.temperature.value).toFixed(2);
+setFinishStatus();
+inspectWebGPU();
+probeWebGPU(false);
+log('TGAI v0038 ready. External catalog chooser uses an explicit button + hidden file input.');
+ensureWebLLM().catch(err=>setStatus(`Could not load WebLLM catalog: ${err.message||err}`));
+renderReferences();
+log('TGAI Browser LLM Lab v0038 initialized.');
+</script>
+</body>
+</html>
