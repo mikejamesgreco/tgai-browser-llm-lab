@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>TGAI Browser LLM Lab v0041</title>
+<title>TGAI Browser LLM Lab v0042</title>
 <meta name="description" content="A single-file local-first WebLLM lab with persistent chat context, local reference files, model discovery, and WebGPU diagnostics.">
 <style>
 *{box-sizing:border-box}
@@ -212,7 +212,7 @@ footer a:hover{color:var(--blue);text-decoration:underline}
 @media(max-width:980px){.grid{grid-template-columns:1fr}.side{display:grid;grid-template-columns:1fr 1fr}}
 @media(max-width:680px){body{padding:8px}.side{display:flex}.formrow,.formrow.three{grid-template-columns:1fr}.metrics{grid-template-columns:1fr}.msg{max-width:96%}}
 
-    /* v0041 workspace separation */
+    /* v0042 workspace separation */
     .workspaceSeparator{
       display:flex;align-items:center;gap:14px;margin:10px 0 2px;padding:12px 4px;
       scroll-margin-top:16px
@@ -252,6 +252,63 @@ footer a:hover{color:var(--blue);text-decoration:underline}
     .diagnosticGrid .log{min-height:220px;max-height:420px}
     @media(max-width:900px){.diagnosticGrid{grid-template-columns:1fr}.workspaceHead{display:block}}
 
+
+    .helpBtn{font-weight:800}
+    .helpOverlay{
+      position:fixed;inset:0;z-index:1000;display:none;align-items:flex-start;justify-content:center;
+      padding:28px 16px;background:rgba(15,23,42,.72);backdrop-filter:blur(3px);overflow:auto
+    }
+    .helpOverlay.open{display:flex}
+    .helpDialog{
+      width:min(1040px,100%);max-height:calc(100vh - 56px);overflow:auto;background:var(--panel);
+      color:var(--text);border:1px solid var(--line);border-radius:14px;box-shadow:0 24px 70px rgba(0,0,0,.35)
+    }
+    .helpTop{
+      position:sticky;top:0;z-index:2;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;
+      padding:18px 20px;border-bottom:1px solid var(--line);background:var(--panel)
+    }
+    .helpTop h2{margin:0 0 4px;font-size:20px}
+    .helpTop p{margin:0;color:var(--muted);font-size:12px}
+    .helpClose{font-size:18px;line-height:1;padding:7px 10px}
+    .helpBody{padding:20px}
+    .helpToc{
+      display:flex;gap:7px;flex-wrap:wrap;margin:0 0 20px;padding:10px;border:1px solid var(--line);
+      border-radius:10px;background:var(--bg)
+    }
+    .helpToc a{
+      color:var(--text);text-decoration:none;font-size:10px;font-weight:800;padding:6px 8px;
+      border:1px solid var(--line);border-radius:6px;background:var(--panel)
+    }
+    .helpToc a:hover{color:var(--accent);border-color:var(--accent)}
+    .helpSection{scroll-margin-top:90px;padding:18px 0;border-top:1px solid var(--line)}
+    .helpSection:first-of-type{border-top:0;padding-top:0}
+    .helpSection h3{margin:0 0 8px;font-size:15px}
+    .helpSection h4{margin:14px 0 5px;font-size:12px}
+    .helpSection p,.helpSection li{font-size:12px;line-height:1.65}
+    .helpSection p{margin:7px 0}
+    .helpSection ul{margin:7px 0 7px 20px;padding:0}
+    .helpCallout{
+      margin:10px 0;padding:11px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);
+      font-size:12px;line-height:1.55
+    }
+    .helpGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .helpTile{padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+    .helpTile b{display:block;margin-bottom:4px;font-size:11px}
+    .helpTile span{display:block;color:var(--muted);font-size:11px;line-height:1.5}
+    .helpSources{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .helpSource{
+      display:block;padding:10px 11px;border:1px solid var(--line);border-radius:8px;background:var(--bg);
+      color:var(--text);text-decoration:none;font-size:11px;font-weight:800
+    }
+    .helpSource small{display:block;margin-top:3px;color:var(--muted);font-weight:500;line-height:1.45}
+    .helpSource:hover{border-color:var(--accent);color:var(--accent)}
+    body.helpOpen{overflow:hidden}
+    @media(max-width:720px){
+      .helpGrid,.helpSources{grid-template-columns:1fr}
+      .helpOverlay{padding:8px}.helpDialog{max-height:calc(100vh - 16px)}
+      .helpBody{padding:14px}.helpTop{padding:14px}
+    }
+
 </style>
 </head>
 <body>
@@ -264,17 +321,157 @@ footer a:hover{color:var(--blue);text-decoration:underline}
     </div>
     <div class="controls">
       <span class="badge" id="webgpuBadge">Checking WebGPU…</span>
+      <button id="helpBtn" class="helpBtn" type="button" title="Open plain-English help about TGAI, models, privacy, WebGPU, references, image generation, and troubleshooting." aria-label="Open TGAI help">Help / About</button>
       <button id="probeGpuBtn" type="button" title="Ask the browser for a WebGPU adapter and report basic adapter/device capability information." aria-label="Probe browser WebGPU adapter">Probe GPU</button>
       <button id="newChatBtn" title="Start a fresh local chat session and clear the current chat history shown on this page." aria-label="Start a new local chat">New Chat</button>
       <button id="unloadBtn" title="Unload the active WebLLM model from browser memory to free CPU/GPU resources." aria-label="Unload active language model">Unload Model</button>
     </div>
   </header>
 
+  <div class="helpOverlay" id="helpOverlay" aria-hidden="true">
+    <div class="helpDialog" id="helpDialog" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+      <div class="helpTop">
+        <div>
+          <h2 id="helpTitle">TGAI Help / About</h2>
+          <p>A plain-English guide to what this page is doing, where the models come from, and what stays local.</p>
+        </div>
+        <button class="helpClose" id="helpCloseBtn" type="button" aria-label="Close help" title="Close help">×</button>
+      </div>
+      <div class="helpBody">
+        <nav class="helpToc" aria-label="Help topics">
+          <a href="#help-start">Start Here</a>
+          <a href="#help-chat">Chat</a>
+          <a href="#help-reference">References</a>
+          <a href="#help-models">Models</a>
+          <a href="#help-image">Text to Image</a>
+          <a href="#help-gpu">GPU / WebGPU</a>
+          <a href="#help-cache">Downloads &amp; Cache</a>
+          <a href="#help-privacy">Privacy</a>
+          <a href="#help-diagnostics">Diagnostics</a>
+          <a href="#help-troubleshooting">Troubleshooting</a>
+          <a href="#help-sources">Sources &amp; Credits</a>
+        </nav>
+
+        <section class="helpSection" id="help-start">
+          <h3>Start here — what is TGAI?</h3>
+          <p><b>TGAI Browser LLM Lab</b> is a local-first AI playground contained in one HTML application. It lets you try browser-ready language models, give them local reference material, experiment with vision-capable chat models, and generate images with a separate browser-local image runtime.</p>
+          <div class="helpCallout"><b>The simple version:</b> this page is the control panel. The AI models are separate, often very large files. TGAI downloads the runtime/model resources it needs, then runs the actual inference on your computer instead of sending each prompt to a hosted AI inference server.</div>
+          <p>TGAI is meant to make the moving pieces visible rather than hide them. That is why the page exposes model source links, GPU information, cache status, loading progress, generation speed, and a runtime log.</p>
+        </section>
+
+        <section class="helpSection" id="help-chat">
+          <h3>Chat &amp; Reference workspace</h3>
+          <p>This is the language-model side of TGAI. Pick a model, click <b>Load Model</b>, wait for it to download/load, and then chat with it. The model runs through <b>WebLLM</b>, an in-browser language-model engine that uses WebGPU for hardware acceleration.</p>
+          <div class="helpGrid">
+            <div class="helpTile"><b>Chat model</b><span>Reads your text and produces text. Coding models are tuned more heavily toward programming; general models are broader assistants.</span></div>
+            <div class="helpTile"><b>Vision / VLM model</b><span>A language model that can also inspect an attached image. A text-only model cannot understand image attachments.</span></div>
+            <div class="helpTile"><b>Reasoning model</b><span>A model tuned to spend more effort on multi-step problems. It can be slower and may produce longer answers.</span></div>
+            <div class="helpTile"><b>Embedding model</b><span>Turns text into numeric vectors used to compare meaning. It is useful for search/RAG, not normal conversation.</span></div>
+          </div>
+          <p><b>New Chat</b> clears the conversation history used by TGAI. <b>Unload Model</b> asks the browser runtime to release the active language model from working memory; it does not necessarily erase the downloaded model files from browser storage.</p>
+        </section>
+
+        <section class="helpSection" id="help-reference">
+          <h3>What are local reference files and “grounding”?</h3>
+          <p>You can load local text, SQL, code, JSON, logs, Markdown, CSV and other supported text files into the Reference area. TGAI reads that material in your browser and can insert part of it into the model's request so the model has something authoritative to work from.</p>
+          <div class="helpCallout"><b>This is not training.</b> Loading a reference file does not permanently teach or retrain the model. It is more like putting selected pages on the desk beside the model before asking the question.</div>
+          <p>The current reference mode is deliberately straightforward: TGAI includes reference text up to the character limit you choose. <b>Reference-only grounding</b> tells the model to answer from those files or say that the answer is not present. This is not yet a full retrieval-augmented generation (RAG) pipeline that automatically searches a large document library for only the most relevant chunks.</p>
+          <p>The Context Inspector shows approximately what TGAI is preparing for the next request: system instructions, selected reference material, prior chat history, and your new prompt.</p>
+        </section>
+
+        <section class="helpSection" id="help-models">
+          <h3>Where do the chat models come from?</h3>
+          <p>TGAI does not create or claim ownership of the language models. The main browser-loadable list comes from the <b>WebLLM / MLC</b> model configuration exposed by the WebLLM runtime. MLC prepares model weights and compiled model libraries so supported models can run efficiently in environments such as WebGPU.</p>
+          <p>Many model packages are hosted on <b>Hugging Face</b>, a model repository service. The model's Hugging Face page normally includes a model card with information supplied by the model publisher: intended use, architecture, limitations, license information, evaluation notes, and other details.</p>
+          <div class="helpCallout"><b>Why does each model have its own link?</b> TGAI's Model Explorer intentionally keeps a source/project link so you can inspect the actual upstream model instead of relying only on TGAI's short description. For licensing, restrictions, authorship, or model-specific limitations, the upstream model/project documentation is the place to check.</div>
+          <h4>The optional TGAI curated catalog</h4>
+          <p>The external TGAI JSON catalog is an extra layer of human-friendly descriptions and categories. It can include browser models plus reference-only models worth knowing about. <b>Being listed in the curated catalog does not mean a model is loadable in this browser.</b> TGAI compares imported entries with the live WebLLM catalog and shows the loadability status.</p>
+          <p>This distinction is especially useful for large local coding models. Something such as a Qwen Coder model intended for Ollama or llama.cpp may be valuable research for a local coding workstation while still being far too large, or not packaged correctly, for direct WebLLM loading here.</p>
+        </section>
+
+        <section class="helpSection" id="help-image">
+          <h3>Text to Image is a separate AI system</h3>
+          <p>The Text to Image workspace is intentionally separate because it does <b>not</b> use WebLLM. It uses <b>ONNX Runtime Web</b> with WebGPU and browser-compatible diffusion-model files. You provide a description, and the image model repeatedly transforms noise into an image.</p>
+          <div class="helpGrid">
+            <div class="helpTile"><b>SD-Turbo</b><span>The lighter, very fast baseline. It is useful when you want quick local generations and lower resource use.</span></div>
+            <div class="helpTile"><b>SDXL-Lightning Q4</b><span>A heavier SDXL-based path with dual text encoders and a quantized Lightning U-Net. It can produce higher-quality 1024×1024 results but needs substantially more resources.</span></div>
+            <div class="helpTile"><b>Stable Diffusion 2.1</b><span>Kept as a legacy compatibility experiment. TGAI can load the model package, but current WebGPU testing can fail at a U-Net shader operation, so it is not the recommended path.</span></div>
+            <div class="helpTile"><b>Seed / passes / size</b><span>The seed controls the starting random noise. Passes are denoising steps. Larger image dimensions usually require more GPU memory and computation.</span></div>
+          </div>
+          <p>Loading an image model can automatically unload the active WebLLM chat model so the two large runtimes do not unnecessarily compete for GPU memory.</p>
+        </section>
+
+        <section class="helpSection" id="help-gpu">
+          <h3>Why does TGAI care about the GPU and WebGPU?</h3>
+          <p>AI inference involves a huge amount of matrix math. A graphics processor is very good at doing many calculations in parallel. <b>WebGPU</b> is the browser standard that lets web applications use modern GPU compute capabilities without installing a vendor-specific AI application.</p>
+          <p>Your browser, operating system, GPU driver, available memory, and the model itself all matter. Two computers running the same HTML file can therefore have very different loading times, generation speeds, and maximum practical model sizes.</p>
+          <p>TGAI's <b>Probe GPU</b> and Browser/GPU diagnostics are there to make that visible. A failure does not always mean the GPU is too weak; it can also be a browser/runtime/model-kernel compatibility problem.</p>
+        </section>
+
+        <section class="helpSection" id="help-cache">
+          <h3>Model downloads, memory, and browser cache</h3>
+          <p>AI models are much larger than ordinary web-page assets. Small language models may still require hundreds of megabytes or more, and image or larger language models can require multiple gigabytes. The first load is therefore normally the slowest because files must be fetched.</p>
+          <div class="helpGrid">
+            <div class="helpTile"><b>Browser disk cache</b><span>Downloaded model files can be kept in browser-managed storage so later sessions may reuse them without downloading everything again.</span></div>
+            <div class="helpTile"><b>CPU / JavaScript memory</b><span>The application and runtime may hold model information and temporary tensors in normal process memory.</span></div>
+            <div class="helpTile"><b>GPU memory</b><span>Inference sessions and tensors can occupy dedicated or shared GPU memory while a model is loaded.</span></div>
+            <div class="helpTile"><b>Unload vs. delete</b><span>Unloading asks the runtime to release active inference resources. Clearing a model cache deletes its stored download. They are different operations.</span></div>
+          </div>
+          <p><b>Request Persistent Storage</b> asks the browser to reduce the chance that cached model files are automatically evicted when storage pressure occurs. The browser can decline the request, and persistence is not the same thing as making a cloud backup.</p>
+        </section>
+
+        <section class="helpSection" id="help-privacy">
+          <h3>What “local-first” means here</h3>
+          <p>The important distinction is between <b>downloading software/model resources</b> and <b>performing inference</b>. TGAI normally needs network access the first time it loads WebLLM, ONNX Runtime Web, tokenizers, or model files because those resources are hosted elsewhere. Once the necessary resources are present and usable, the actual supported model inference happens in your browser on your machine.</p>
+          <p>TGAI itself does not need a hosted prompt/inference server for these local model paths. Local reference files are read by the browser for use in the local application; TGAI does not intentionally upload those files to an AI inference service.</p>
+          <div class="helpCallout"><b>Local-first does not mean “no network traffic ever.”</b> Opening the application or loading a model can contact CDNs, GitHub/Hugging Face/model hosts, or other upstream locations used for runtime and model files. If you need a strict offline environment, preload/copying all dependencies would be a separate deployment exercise.</div>
+        </section>
+
+        <section class="helpSection" id="help-diagnostics">
+          <h3>Diagnostics &amp; Logging workspace</h3>
+          <p>This section is the dashboard for what TGAI sees from the browser. It reports WebGPU availability, adapter details, approximate memory information when the browser exposes it, the currently loaded chat model, reference size, model load/generation timing, tokens per second, and runtime messages.</p>
+          <p>The log is especially useful when a model does not load. A large AI model can fail for very different reasons: a missing file, browser storage issue, unsupported GPU feature, incompatible ONNX operator/kernel, device loss, out-of-memory condition, or a runtime/model packaging problem.</p>
+          <p>The image workspace also has targeted compatibility diagnostics because image-generation ONNX graphs can exercise very different GPU kernels than language models.</p>
+        </section>
+
+        <section class="helpSection" id="help-troubleshooting">
+          <h3>Common troubleshooting</h3>
+          <ul>
+            <li><b>A model is listed but Load Model is unavailable:</b> it may be a reference-only catalog entry rather than a model exposed by the current WebLLM built-in catalog.</li>
+            <li><b>First load takes a long time:</b> watch the progress/status. Multi-gigabyte model downloads are normal for heavier models.</li>
+            <li><b>The model used to work but now looks disposed:</b> browsers can reclaim a WebGPU device/runtime after long idle periods. Reload the model; TGAI tries to preserve the unsent prompt.</li>
+            <li><b>Generation is extremely slow:</b> try a smaller model, lower-memory quantization, smaller image size, or fewer supported image passes. Check that the browser actually selected the intended GPU.</li>
+            <li><b>Image generation fails during the first U-Net pass:</b> enable Image Compatibility Diagnostic mode and inspect the diagnostic result/runtime log.</li>
+            <li><b>Cached models disappeared:</b> browser storage is managed by the browser and may be cleared manually or evicted under storage pressure. Persistent Storage can reduce, not eliminate, that possibility.</li>
+            <li><b>The browser freezes:</b> very large models can overwhelm available memory. Start with a smaller model and unload other AI runtimes before retrying.</li>
+          </ul>
+        </section>
+
+        <section class="helpSection" id="help-sources">
+          <h3>Sources, upstream projects, and credits</h3>
+          <p>TGAI is an integration/experimentation layer. These upstream projects and repositories provide the runtimes, model ecosystem, or model files used by the lab. Individual models may have their own licenses and terms, so use the per-model source link and model card for model-specific details.</p>
+          <div class="helpSources">
+            <a class="helpSource" href="https://webllm.mlc.ai/docs/" target="_blank" rel="noopener noreferrer">WebLLM Documentation ↗<small>In-browser large-language-model inference with WebGPU.</small></a>
+            <a class="helpSource" href="https://github.com/mlc-ai/web-llm" target="_blank" rel="noopener noreferrer">WebLLM GitHub ↗<small>Source project used for TGAI's browser chat runtime and live model catalog.</small></a>
+            <a class="helpSource" href="https://llm.mlc.ai/" target="_blank" rel="noopener noreferrer">MLC LLM ↗<small>Model compilation/deployment technology behind the MLC/WebLLM ecosystem.</small></a>
+            <a class="helpSource" href="https://onnxruntime.ai/docs/tutorials/web/" target="_blank" rel="noopener noreferrer">ONNX Runtime Web ↗<small>Browser inference runtime used by TGAI's image-generation workspace.</small></a>
+            <a class="helpSource" href="https://huggingface.co/docs/hub/models" target="_blank" rel="noopener noreferrer">Hugging Face Model Hub ↗<small>Hosts many of the upstream model repositories and model cards linked by TGAI.</small></a>
+            <a class="helpSource" href="https://huggingface.co/schmuell/sd-turbo-ort-web" target="_blank" rel="noopener noreferrer">SD-Turbo ORT Web Model ↗<small>The browser-compatible SD-Turbo package used by TGAI.</small></a>
+            <a class="helpSource" href="https://huggingface.co/d0gr/sdxl-lightning-onnx-webgpu-int4" target="_blank" rel="noopener noreferrer">SDXL-Lightning ONNX WebGPU Q4 ↗<small>The SDXL-Lightning model repository used by TGAI's heavier image path.</small></a>
+            <a class="helpSource" href="https://huggingface.co/aislamov/stable-diffusion-2-1-base-onnx" target="_blank" rel="noopener noreferrer">Stable Diffusion 2.1 ONNX ↗<small>Legacy ONNX package retained for compatibility testing.</small></a>
+          </div>
+          <div class="helpCallout"><b>SFLA note:</b> TGAI's application shell is a single HTML file, but the AI runtime modules and model weights are external resources. That is an intentional distinction: single-file/local-first application design does not imply that multi-gigabyte AI model weights are embedded inside the HTML file.</div>
+        </section>
+      </div>
+    </div>
+  </div>
+
   <main class="grid">
     <nav class="workspaceNav" aria-label="Workspace navigation">
       <a href="#workspace-chat">Chat &amp; Reference</a>
       <a href="#workspace-image">Text to Image</a>
       <a href="#workspace-diagnostics">Diagnostics &amp; Logging</a>
+      <a href="#help" id="helpNavLink" role="button">Help / About</a>
     </nav>
     <section class="card main workspaceCard chatWorkspace" id="workspace-chat">
       <div class="workspaceHead"><div><span class="workspaceKicker">Workspace 1</span><h2>Chat & Reference</h2><p>Load a WebLLM model, chat locally, attach images for VLMs, and ground answers with local reference files.</p></div></div>
@@ -447,7 +644,7 @@ footer a:hover{color:var(--blue);text-decoration:underline}
           <strong>Local Text-to-Image Lab — SD-Turbo / SDXL-Lightning / WebGPU</strong>
           <a href="https://onnxruntime.ai/docs/tutorials/web/" target="_blank" rel="noopener noreferrer" title="Open ONNX Runtime Web documentation">ONNX Runtime Web ↗</a>
         </div>
-        <p>This workspace uses a browser-local diffusion runtime separate from WebLLM chat. TGAI keeps only the active image inference sessions resident in memory. Switching image models releases the prior image sessions; changing dimensions rebuilds only the spatial U-Net/VAE sessions while retaining the reusable text encoder. Model files are kept in browser disk cache. v0041 keeps the working SDXL-Lightning Q4 path and adds contextual help throughout the lab using native browser tooltips and accessibility labels. The persistent-storage controls now explain that persistence only reduces automatic browser cache eviction; it does not upload or sync model files.</p>
+        <p>This workspace uses a browser-local diffusion runtime separate from WebLLM chat. TGAI keeps only the active image inference sessions resident in memory. Switching image models releases the prior image sessions; changing dimensions rebuilds only the spatial U-Net/VAE sessions while retaining the reusable text encoder. Model files are kept in browser disk cache. v0042 keeps the working SDXL-Lightning Q4 path and adds contextual help throughout the lab using native browser tooltips and accessibility labels. The persistent-storage controls now explain that persistence only reduces automatic browser cache eviction; it does not upload or sync model files.</p>
         <div class="imageGrid">
           <div>
             <label for="imagePrompt">Image prompt</label>
@@ -608,13 +805,42 @@ footer a:hover{color:var(--blue);text-decoration:underline}
     </section>
   </main>
   <footer>
-    <span>© <span id="year"></span> mikejamesgreco.me LLC. All rights reserved. v0041 · <a class="docs" href="https://github.com/mikejamesgreco/tgai-browser-llm-lab#readme" target="_blank" rel="noopener noreferrer" title="Open the TGAI Browser LLM Lab repository and README on GitHub">GitHub / README ↗</a></span>
+    <span>© <span id="year"></span> mikejamesgreco.me LLC. All rights reserved. v0042 · <a class="docs" href="https://github.com/mikejamesgreco/tgai-browser-llm-lab#readme" target="_blank" rel="noopener noreferrer" title="Open the TGAI Browser LLM Lab repository and README on GitHub">GitHub / README ↗</a></span>
     <span>Single-file UI · GPU adapter probe · WebLLM chat/vision · Grounding · Multi-model diffusion via ORT WebGPU · persistent disk cache · SDXL-Lightning Q4 · dual text encoders · WebGPU compatibility diagnostics · multi-pass</span>
   </footer>
 </div>
 
 <script type="module">
-const APP_VERSION='v0041';
+const APP_VERSION='v0042';
+
+const helpOverlay=document.getElementById('helpOverlay');
+const helpDialog=document.getElementById('helpDialog');
+const helpBtn=document.getElementById('helpBtn');
+const helpNavLink=document.getElementById('helpNavLink');
+const helpCloseBtn=document.getElementById('helpCloseBtn');
+let helpLastFocus=null;
+function openHelp(){
+  helpLastFocus=document.activeElement;
+  helpOverlay.classList.add('open');
+  helpOverlay.setAttribute('aria-hidden','false');
+  document.body.classList.add('helpOpen');
+  helpCloseBtn.focus();
+}
+function closeHelp(){
+  helpOverlay.classList.remove('open');
+  helpOverlay.setAttribute('aria-hidden','true');
+  document.body.classList.remove('helpOpen');
+  if(helpLastFocus&&typeof helpLastFocus.focus==='function')helpLastFocus.focus();
+}
+helpBtn.addEventListener('click',openHelp);
+helpNavLink.addEventListener('click',e=>{e.preventDefault();openHelp();});
+helpCloseBtn.addEventListener('click',closeHelp);
+helpOverlay.addEventListener('click',e=>{if(e.target===helpOverlay)closeHelp();});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&helpOverlay.classList.contains('open'))closeHelp();
+});
+helpDialog.addEventListener('click',()=>{});
+
 window.addEventListener('error',e=>{
   try{
     const msg=e?.error?.message||e?.message||'Unknown JavaScript error';
