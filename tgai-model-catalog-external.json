@@ -1,0 +1,724 @@
+{
+  "schema": "tgai-model-catalog-v1",
+  "catalog_name": "TGAI Curated Open Model Catalog v0005",
+  "curated_date": "2026-09-07",
+  "notes": "Expanded public curation for the TGAI Browser LLM Lab. The live WebLLM prebuilt catalog remains authoritative for direct browser loadability. This catalog separates browser-loadable MLC/WebLLM experiments from reference-only local-desktop models and image-generation runtimes. Embedding models are retained for future semantic retrieval/RAG but are not chat models. Qwen3-Coder 30B and Qwen3.5 coding variants are intentionally reference-only: they are strong local coding-workstation candidates for Ollama/llama.cpp-class runtimes, not models TGAI should imply are directly browser-loadable.",
+  "models": [
+    {
+      "model_id": "Qwen2.5-Coder-0.5B-Instruct-q4f16_1-MLC",
+      "display_name": "Qwen2.5 Coder 0.5B · Fast SQL/Code Baseline",
+      "category": "coding",
+      "tags": [
+        "code",
+        "sql",
+        "small",
+        "fast"
+      ],
+      "good_for_text": "Excellent experimental baseline for SQL, PL/SQL, JavaScript, code transformation, and grounded domain assistants. Small enough to show how much authoritative reference material can compensate for model size.",
+      "info_url": "https://huggingface.co/mlc-ai/Qwen2.5-Coder-0.5B-Instruct-q4f16_1-MLC"
+    },
+    {
+      "model_id": "Qwen2.5-Coder-1.5B-Instruct-q4f16_1-MLC",
+      "display_name": "Qwen2.5 Coder 1.5B · Practical Coding Step-Up",
+      "category": "coding",
+      "tags": [
+        "code",
+        "sql",
+        "balanced"
+      ],
+      "good_for_text": "A particularly interesting next step for TGAI: stronger coding/SQL capacity than 0.5B while still much smaller than 7B. Good candidate for grounded Oracle EBS work and everyday code review.",
+      "info_url": "https://huggingface.co/mlc-ai/Qwen2.5-Coder-1.5B-Instruct-q4f16_1-MLC"
+    },
+    {
+      "model_id": "Qwen2.5-Coder-3B-Instruct-q4f16_1-MLC",
+      "display_name": "Qwen2.5 Coder 3B · Coding Sweet-Spot Candidate",
+      "category": "coding",
+      "tags": [
+        "code",
+        "sql",
+        "medium"
+      ],
+      "good_for_text": "Strong candidate for the middle ground between browser speed and coding quality. Worth benchmarking on Oracle EBS SQL both with and without local grounding.",
+      "info_url": "https://huggingface.co/mlc-ai/Qwen2.5-Coder-3B-Instruct-q4f16_1-MLC"
+    },
+    {
+      "model_id": "Qwen2.5-Coder-7B-Instruct-q4f32_1-MLC",
+      "display_name": "Qwen2.5 Coder 7B q4f32 · Heavy Coding Control",
+      "category": "coding",
+      "tags": [
+        "code",
+        "sql",
+        "large",
+        "slow"
+      ],
+      "good_for_text": "Large coding control model. Useful for measuring quality gains versus smaller grounded models, but on modest GPUs it can be far too slow for interactive work; your first TGAI test measured about 0.74 tokens/sec.",
+      "info_url": "https://huggingface.co/mlc-ai/Qwen2.5-Coder-7B-Instruct-q4f32_1-MLC"
+    },
+    {
+      "model_id": "Qwen2.5-1.5B-Instruct-q4f16_1-MLC",
+      "display_name": "Qwen2.5 1.5B Instruct · Everyday Generalist",
+      "category": "general",
+      "tags": [
+        "chat",
+        "writing",
+        "summarize"
+      ],
+      "good_for_text": "General-purpose small instruction model for writing, summarization, extraction, Q&A, and comparing a generalist against the Coder variant at a similar size.",
+      "info_url": "https://huggingface.co/mlc-ai/Qwen2.5-1.5B-Instruct-q4f16_1-MLC"
+    },
+    {
+      "model_id": "SmolLM2-360M-Instruct-q4f32_1-MLC",
+      "display_name": "SmolLM2 360M · Tiny/Fast Baseline",
+      "category": "general",
+      "tags": [
+        "tiny",
+        "fast",
+        "baseline"
+      ],
+      "good_for_text": "Very small model useful for testing low-resource browser inference, simple extraction, short rewriting, and the limits of tiny grounded assistants.",
+      "info_url": "https://huggingface.co/mlc-ai/SmolLM2-360M-Instruct-q4f32_1-MLC"
+    },
+    {
+      "model_id": "SmolLM2-1.7B-Instruct-q4f16_1-MLC",
+      "display_name": "SmolLM2 1.7B · Lightweight Generalist",
+      "category": "general",
+      "tags": [
+        "chat",
+        "small",
+        "general"
+      ],
+      "good_for_text": "Lightweight general instruction model for chat, summarization, rewriting, and comparison with similarly sized Qwen/Phi models.",
+      "info_url": "https://huggingface.co/mlc-ai/SmolLM2-1.7B-Instruct-q4f16_1-MLC"
+    },
+    {
+      "model_id": "Phi-4-mini-instruct-q4f16_1-MLC",
+      "display_name": "Phi-4 Mini · Compact Reasoning/Work Model",
+      "category": "general",
+      "tags": [
+        "reasoning",
+        "office",
+        "code"
+      ],
+      "good_for_text": "Compact higher-capability model worth testing for reasoning, technical Q&A, writing, extraction, and code tasks when a tiny model is not enough.",
+      "info_url": "https://huggingface.co/mlc-ai/Phi-4-mini-instruct-q4f16_1-MLC"
+    },
+    {
+      "model_id": "Phi-3.5-vision-instruct-q4f16_1-MLC",
+      "display_name": "Phi-3.5 Vision q4f16 · Image Understanding Lab",
+      "category": "vision",
+      "tags": [
+        "vision",
+        "vlm",
+        "image-understanding",
+        "heavy",
+        "experimental"
+      ],
+      "good_for_text": "IMAGE → TEXT model. Official WebLLM config estimates about 3.95 GB VRAM. TGAI v0014 downsamples images before sending them; still treat this as a heavy experimental workload on integrated graphics.",
+      "info_url": "https://huggingface.co/mlc-ai/Phi-3.5-vision-instruct-q4f16_1-MLC"
+    },
+    {
+      "model_id": "Llama-3.2-3B-Instruct-q4f16_1-MLC",
+      "display_name": "Llama 3.2 3B · General 3B Control",
+      "category": "general",
+      "tags": [
+        "llama",
+        "3b",
+        "general",
+        "balanced"
+      ],
+      "good_for_text": "General-purpose 3B Llama control for comparing grounded behavior against Qwen and Phi models.",
+      "info_url": "https://huggingface.co/mlc-ai/Llama-3.2-3B-Instruct-q4f16_1-MLC"
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3-q4f16_1-MLC",
+      "display_name": "Mistral 7B Instruct · Large Generalist",
+      "category": "general",
+      "tags": [
+        "chat",
+        "writing",
+        "large"
+      ],
+      "good_for_text": "Large general instruction model for broader chat, writing, summarization, and reasoning comparisons. More demanding than 1–3B browser models.",
+      "info_url": "https://huggingface.co/mlc-ai/Mistral-7B-Instruct-v0.3-q4f16_1-MLC"
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Qwen-7B-q4f16_1-MLC",
+      "display_name": "DeepSeek R1 Distill Qwen 7B · Reasoning Experiment",
+      "category": "reasoning",
+      "tags": [
+        "reasoning",
+        "analysis",
+        "large"
+      ],
+      "good_for_text": "Interesting for deliberate multi-step reasoning, analytical problem solving, and code/math experiments. Expect a substantially heavier browser workload than small instruction models.",
+      "info_url": "https://huggingface.co/mlc-ai/DeepSeek-R1-Distill-Qwen-7B-q4f16_1-MLC"
+    },
+    {
+      "model_id": "Phi-3.5-mini-instruct-q4f16_1-MLC",
+      "display_name": "Phi-3.5 Mini · Compact General/Reasoning Model",
+      "category": "general",
+      "tags": [
+        "reasoning",
+        "code",
+        "office",
+        "3.8b"
+      ],
+      "good_for_text": "Compact Microsoft Phi-family model for technical Q&A, reasoning, writing, summarization and code experiments. Useful comparison against Qwen Coder and Llama in the middle-size browser tier.",
+      "info_url": "https://huggingface.co/mlc-ai/Phi-3.5-mini-instruct-q4f16_1-MLC"
+    },
+    {
+      "model_id": "Qwen2.5-3B-Instruct-q4f32_1-MLC",
+      "display_name": "Qwen2.5 3B q4f32 · General 3B Control",
+      "category": "general",
+      "tags": [
+        "chat",
+        "3b",
+        "qwen",
+        "general"
+      ],
+      "good_for_text": "General-purpose 3B Qwen control for writing, extraction, summarization and technical Q&A; useful against the specialized Qwen Coder 3B.",
+      "info_url": "https://huggingface.co/mlc-ai/Qwen2.5-3B-Instruct-q4f32_1-MLC"
+    },
+    {
+      "model_id": "Qwen2.5-7B-Instruct-q4f32_1-MLC",
+      "display_name": "Qwen2.5 7B q4f32 · Heavy Generalist",
+      "category": "general",
+      "tags": [
+        "chat",
+        "7b",
+        "large",
+        "qwen"
+      ],
+      "good_for_text": "Large general-purpose Qwen model for capability comparisons on stronger hardware. Expect a major memory and speed cost in browser inference.",
+      "info_url": "https://huggingface.co/mlc-ai/Qwen2.5-7B-Instruct-q4f32_1-MLC"
+    },
+    {
+      "model_id": "Qwen2.5-7B-Instruct-q0f16-MLC",
+      "display_name": "Qwen2.5 7B q0f16 · High-Precision Heavy Control",
+      "category": "general",
+      "tags": [
+        "chat",
+        "7b",
+        "q0",
+        "very-large"
+      ],
+      "good_for_text": "High-memory 7B experiment with much less aggressive weight quantization than q4. Interesting for fidelity comparisons on a machine with substantial GPU/shared memory.",
+      "info_url": "https://huggingface.co/mlc-ai/Qwen2.5-7B-Instruct-q0f16-MLC"
+    },
+    {
+      "model_id": "Llama-3.1-8B-Instruct-q4f16_1-MLC-1k",
+      "display_name": "Llama 3.1 8B · Low-Context Heavy Control",
+      "category": "general",
+      "tags": [
+        "chat",
+        "8b",
+        "1k-context",
+        "large"
+      ],
+      "good_for_text": "8B general-purpose control with a reduced 1K context configuration intended to lower resource requirements. Better for short prompts than document-heavy grounding.",
+      "info_url": "https://huggingface.co/mlc-ai/Llama-3.1-8B-Instruct-q4f16_1-MLC"
+    },
+    {
+      "model_id": "Hermes-2-Pro-Mistral-7B-q4f16_1-MLC",
+      "display_name": "Hermes 2 Pro Mistral 7B · Instruction/Tool Experiment",
+      "category": "general",
+      "tags": [
+        "7b",
+        "instruction",
+        "tools",
+        "large"
+      ],
+      "good_for_text": "Instruction-tuned Mistral-family experiment useful for structured responses, general assistant work and comparing behavior with base Mistral/Qwen/Llama families.",
+      "info_url": "https://huggingface.co/mlc-ai/Hermes-2-Pro-Mistral-7B-q4f16_1-MLC"
+    },
+    {
+      "model_id": "stable-diffusion-2-1-base-onnx",
+      "display_name": "Stable Diffusion 2.1 Base ONNX · Browser Text-to-Image Research",
+      "category": "text-to-image",
+      "runtime": "ONNX Runtime Web / WebGPU (legacy export)",
+      "status": "legacy-reference",
+      "reference_only": true,
+      "tags": [
+        "text-to-image",
+        "diffusion",
+        "webgpu",
+        "image-generation"
+      ],
+      "good_for_text": "PROMPT → IMAGE legacy compatibility reference. TGAI can load this ONNX export, including its split VAE external data, but current ORT WebGPU/Edge/Dawn testing reaches the U-Net and then fails when the BiasSplitGelu WebGPU shader is rejected. Retained as a useful compatibility case, not a recommended image-generation path.",
+      "info_url": "https://huggingface.co/aislamov/stable-diffusion-2-1-base-onnx"
+    },
+    {
+      "model_id": "stable-diffusion-v1-5-onnx",
+      "display_name": "Stable Diffusion 1.5 ONNX · Text-to-Image Reference",
+      "category": "text-to-image",
+      "runtime": "ONNX diffusion runtime",
+      "status": "reference",
+      "reference_only": true,
+      "tags": [
+        "text-to-image",
+        "diffusion",
+        "onnx",
+        "image-generation"
+      ],
+      "good_for_text": "PROMPT → IMAGE research candidate. ONNX Stable Diffusion pipelines exist, but this is not loadable through WebLLM; TGAI would need a dedicated diffusion pipeline/runtime.",
+      "info_url": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5"
+    },
+    {
+      "model_id": "Qwen3-0.6B-q4f16_1-MLC",
+      "display_name": "Qwen3 0.6B · Tiny Modern Qwen Experiment",
+      "category": "general",
+      "tags": [
+        "qwen3",
+        "0.6b",
+        "tiny",
+        "reasoning",
+        "fast"
+      ],
+      "good_for_text": "Very small Qwen3-family experiment. Attractive for testing how much capability TGAI can recover from strong grounding on constrained hardware.",
+      "info_url": "https://huggingface.co/mlc-ai/Qwen3-0.6B-q4f16_1-MLC"
+    },
+    {
+      "model_id": "Qwen3-1.7B-q4f16_1-MLC",
+      "display_name": "Qwen3 1.7B · Practical Modern Generalist",
+      "category": "general",
+      "tags": [
+        "qwen3",
+        "1.7b",
+        "reasoning",
+        "balanced"
+      ],
+      "good_for_text": "Modern Qwen3 middle-small model. A particularly interesting TGAI candidate between tiny models and the 3–4B class.",
+      "info_url": "https://huggingface.co/mlc-ai/Qwen3-1.7B-q4f16_1-MLC"
+    },
+    {
+      "model_id": "Qwen3-4B-q4f16_1-MLC",
+      "display_name": "Qwen3 4B · Stronger Modern Generalist",
+      "category": "general",
+      "tags": [
+        "qwen3",
+        "4b",
+        "reasoning",
+        "large"
+      ],
+      "good_for_text": "Stronger Qwen3 experiment for reasoning and general technical work. Likely substantially heavier than the 1.7B model on this machine.",
+      "info_url": "https://huggingface.co/mlc-ai/Qwen3-4B-q4f16_1-MLC"
+    },
+    {
+      "model_id": "Qwen3-4B-q4f32_1-MLC",
+      "display_name": "Qwen3 4B q4f32 · Higher-Memory Control",
+      "category": "general",
+      "tags": [
+        "qwen3",
+        "4b",
+        "q4f32",
+        "large"
+      ],
+      "good_for_text": "Higher-memory Qwen3 4B control for quantization comparisons. Not a first choice on constrained integrated graphics.",
+      "info_url": "https://huggingface.co/mlc-ai/Qwen3-4B-q4f32_1-MLC"
+    },
+    {
+      "model_id": "Qwen3-8B-q4f16_1-MLC",
+      "display_name": "Qwen3 8B · Heavy Capability Control",
+      "category": "general",
+      "tags": [
+        "qwen3",
+        "8b",
+        "very-large",
+        "reasoning"
+      ],
+      "good_for_text": "Heavy Qwen3 capability control. Included for catalog completeness, but likely beyond the comfortable interactive range of the current machine.",
+      "info_url": "https://huggingface.co/mlc-ai/Qwen3-8B-q4f16_1-MLC"
+    },
+    {
+      "model_id": "Llama-3.2-1B-Instruct-q4f16_1-MLC",
+      "display_name": "Llama 3.2 1B · Lightweight Generalist",
+      "category": "general",
+      "tags": [
+        "llama",
+        "1b",
+        "lightweight",
+        "general"
+      ],
+      "good_for_text": "Compact Llama-family control for grounded writing, extraction and simple technical work; a useful comparison with Qwen3 0.6B/1.7B.",
+      "info_url": "https://huggingface.co/mlc-ai/Llama-3.2-1B-Instruct-q4f16_1-MLC"
+    },
+    {
+      "model_id": "SmolLM2-360M-Instruct-q4f16_1-MLC",
+      "display_name": "SmolLM2 360M q4f16 · Ultra-Light Baseline",
+      "category": "general",
+      "tags": [
+        "smollm",
+        "360m",
+        "tiny",
+        "fast"
+      ],
+      "good_for_text": "Extremely small baseline for speed and grounding experiments. Useful for testing the minimum viable local model size.",
+      "info_url": "https://huggingface.co/mlc-ai/SmolLM2-360M-Instruct-q4f16_1-MLC"
+    },
+    {
+      "model_id": "TinyLlama-1.1B-Chat-v0.4-q4f16_1-MLC",
+      "display_name": "TinyLlama 1.1B · Legacy Lightweight Control",
+      "category": "general",
+      "tags": [
+        "tinyllama",
+        "1.1b",
+        "lightweight",
+        "legacy"
+      ],
+      "good_for_text": "Older lightweight Llama-family control. Less compelling than newer small models, but useful as a historical/browser performance baseline.",
+      "info_url": "https://huggingface.co/mlc-ai/TinyLlama-1.1B-Chat-v0.4-q4f16_1-MLC"
+    },
+    {
+      "model_id": "phi-2-q4f16_1-MLC",
+      "display_name": "Phi-2 q4f16 · Legacy Compact Reasoning Control",
+      "category": "general",
+      "tags": [
+        "phi",
+        "2.7b",
+        "legacy",
+        "reasoning"
+      ],
+      "good_for_text": "Older compact Phi-family model for historical comparison. Newer Phi/Qwen models are generally more interesting for new TGAI work.",
+      "info_url": "https://huggingface.co/mlc-ai/phi-2-q4f16_1-MLC"
+    },
+    {
+      "model_id": "gemma-3-1b-it-q4f32_1-MLC",
+      "display_name": "Gemma 3 1B · Lightweight Gemma Experiment",
+      "category": "general",
+      "tags": [
+        "gemma3",
+        "1b",
+        "lightweight"
+      ],
+      "good_for_text": "Small Gemma 3 instruction model. Interesting family-diversity comparison if it appears in the live WebLLM catalog.",
+      "info_url": "https://huggingface.co/mlc-ai/gemma-3-1b-it-q4f32_1-MLC"
+    },
+    {
+      "model_id": "gemma-3-4b-it-q4f16_1-MLC",
+      "display_name": "Gemma 3 4B · Modern Gemma Experiment",
+      "category": "general",
+      "tags": [
+        "gemma3",
+        "4b",
+        "large"
+      ],
+      "good_for_text": "Modern 4B Gemma-family model. Included as a researched MLC/WebLLM candidate; TGAI will only mark it loadable if the live WebLLM catalog contains the matching record.",
+      "info_url": "https://huggingface.co/mlc-ai/gemma-3-4b-it-q4f16_1-MLC"
+    },
+    {
+      "model_id": "gemma-3-12b-it-q4f16_1-MLC",
+      "display_name": "Gemma 3 12B · Very Heavy Research Control",
+      "category": "general",
+      "tags": [
+        "gemma3",
+        "12b",
+        "very-large"
+      ],
+      "good_for_text": "Very heavy Gemma 3 research control. Cataloged for completeness, not recommended on the current machine.",
+      "info_url": "https://huggingface.co/mlc-ai/gemma-3-12b-it-q4f16_1-MLC"
+    },
+    {
+      "model_id": "Hermes-2-Pro-Llama-3-8B-q4f16_1-MLC",
+      "display_name": "Hermes 2 Pro Llama 3 8B · Instruction/Tool Control",
+      "category": "general",
+      "tags": [
+        "hermes",
+        "llama3",
+        "8b",
+        "tools",
+        "large"
+      ],
+      "good_for_text": "Instruction/tool-oriented 8B control found in the broader MLC web-llm-tagged catalog. Heavy for current hardware.",
+      "info_url": "https://huggingface.co/mlc-ai/Hermes-2-Pro-Llama-3-8B-q4f16_1-MLC"
+    },
+    {
+      "model_id": "Phi-3.5-vision-instruct-q4f32_1-MLC",
+      "display_name": "Phi-3.5 Vision q4f32 · Very Heavy Vision Control",
+      "category": "vision",
+      "tags": [
+        "vision",
+        "vlm",
+        "image-understanding",
+        "very-heavy"
+      ],
+      "good_for_text": "Higher-memory IMAGE → TEXT control. Official WebLLM config estimates about 5.88 GB VRAM; not recommended for the current machine after the q4f16 freeze.",
+      "info_url": "https://huggingface.co/mlc-ai/Phi-3.5-vision-instruct-q4f32_1-MLC"
+    },
+    {
+      "model_id": "Qwen2.5-Math-1.5B-Instruct-q4f16_1-MLC",
+      "display_name": "Qwen2.5 Math 1.5B · Lightweight Math Specialist",
+      "category": "math",
+      "tags": [
+        "math",
+        "1.5b",
+        "qwen",
+        "specialist"
+      ],
+      "good_for_text": "Small math-specialized Qwen2.5 model. Useful for quantitative reasoning experiments; WebLLM's current prebuilt config lists this q4f16 variant at about 1.63 GB VRAM.",
+      "info_url": "https://huggingface.co/mlc-ai/Qwen2.5-Math-1.5B-Instruct-q4f16_1-MLC"
+    },
+    {
+      "model_id": "stablelm-2-zephyr-1_6b-q4f16_1-MLC-1k",
+      "display_name": "StableLM 2 Zephyr 1.6B · Low-Context Lightweight Chat",
+      "category": "general",
+      "tags": [
+        "stablelm",
+        "1.6b",
+        "1k-context",
+        "lightweight"
+      ],
+      "good_for_text": "Compact instruction/chat control with a 1K context configuration. Current WebLLM config estimates about 1.51 GB VRAM.",
+      "info_url": "https://huggingface.co/mlc-ai/stablelm-2-zephyr-1_6b-q4f16_1-MLC"
+    },
+    {
+      "model_id": "stablelm-2-zephyr-1_6b-q4f16_1-MLC",
+      "display_name": "StableLM 2 Zephyr 1.6B · General Chat Control",
+      "category": "general",
+      "tags": [
+        "stablelm",
+        "1.6b",
+        "chat"
+      ],
+      "good_for_text": "Compact StableLM-family chat model with larger context than the 1K variant; useful as a non-Qwen small-model comparison.",
+      "info_url": "https://huggingface.co/mlc-ai/stablelm-2-zephyr-1_6b-q4f16_1-MLC"
+    },
+    {
+      "model_id": "TinyLlama-1.1B-Chat-v1.0-q4f16_1-MLC",
+      "display_name": "TinyLlama 1.1B v1.0 · Ultra-Light Chat Control",
+      "category": "general",
+      "tags": [
+        "tinyllama",
+        "1.1b",
+        "lightweight",
+        "fast"
+      ],
+      "good_for_text": "Very small chat model; WebLLM's current config estimates about 697 MB VRAM. Useful as a minimum-capability baseline against newer Qwen3/SmolLM models.",
+      "info_url": "https://huggingface.co/mlc-ai/TinyLlama-1.1B-Chat-v1.0-q4f16_1-MLC"
+    },
+    {
+      "model_id": "RedPajama-INCITE-Chat-3B-v1-q4f16_1-MLC-1k",
+      "display_name": "RedPajama INCITE Chat 3B · Legacy 1K Control",
+      "category": "general",
+      "tags": [
+        "redpajama",
+        "3b",
+        "1k-context",
+        "legacy"
+      ],
+      "good_for_text": "Older 3B chat baseline with reduced context. Current WebLLM config lists about 2.04 GB VRAM and requires shader-f16.",
+      "info_url": "https://huggingface.co/mlc-ai/RedPajama-INCITE-Chat-3B-v1-q4f16_1-MLC"
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B-q4f16_1-MLC",
+      "display_name": "DeepSeek R1 Distill Llama 8B · Heavy Reasoning Control",
+      "category": "reasoning",
+      "tags": [
+        "reasoning",
+        "deepseek-r1",
+        "8b",
+        "large"
+      ],
+      "good_for_text": "Heavy reasoning model. Current WebLLM prebuilt config lists roughly 5.0 GB VRAM. Cataloged for comparison, but not recommended for the current machine.",
+      "info_url": "https://huggingface.co/mlc-ai/DeepSeek-R1-Distill-Llama-8B-q4f16_1-MLC"
+    },
+    {
+      "model_id": "Hermes-2-Theta-Llama-3-8B-q4f16_1-MLC",
+      "display_name": "Hermes 2 Theta Llama 3 8B · Heavy Instruction Control",
+      "category": "general",
+      "tags": [
+        "hermes",
+        "llama3",
+        "8b",
+        "large"
+      ],
+      "good_for_text": "Instruction-tuned Llama 3 family control. Current WebLLM config lists about 4.98 GB VRAM; too heavy for routine use on the current machine.",
+      "info_url": "https://huggingface.co/mlc-ai/Hermes-2-Theta-Llama-3-8B-q4f16_1-MLC"
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3-q3f16_1-MLC",
+      "display_name": "Mistral 7B q3f16 · Smaller Heavyweight Experiment",
+      "category": "general",
+      "tags": [
+        "mistral",
+        "7b",
+        "q3",
+        "large"
+      ],
+      "good_for_text": "A more aggressively quantized Mistral 7B package. The MLC repository is about 3.28 GB, smaller than its q4 package, but still a heavy browser workload.",
+      "info_url": "https://huggingface.co/mlc-ai/Mistral-7B-Instruct-v0.3-q3f16_1-MLC"
+    },
+    {
+      "model_id": "gemma-3-1b-it-q4bf16_0-MLC",
+      "display_name": "Gemma 3 1B q4bf16 · Lightweight Modern Gemma",
+      "category": "general",
+      "tags": [
+        "gemma3",
+        "1b",
+        "lightweight",
+        "bf16"
+      ],
+      "good_for_text": "Small Gemma 3 instruction model packaged by MLC for WebLLM/MLC-LLM. Interesting modern family comparison if present in the live WebLLM catalog.",
+      "info_url": "https://huggingface.co/mlc-ai/gemma-3-1b-it-q4bf16_0-MLC"
+    },
+    {
+      "model_id": "gemma-3-4b-it-q4bf16_1-MLC",
+      "display_name": "Gemma 3 4B q4bf16 · Modern Mid-Size Gemma",
+      "category": "general",
+      "tags": [
+        "gemma3",
+        "4b",
+        "bf16",
+        "large"
+      ],
+      "good_for_text": "Modern Gemma 3 4B MLC/WebLLM package. Potentially interesting on stronger hardware; TGAI only marks it directly loadable when your live WebLLM build exposes it.",
+      "info_url": "https://huggingface.co/mlc-ai/gemma-3-4b-it-q4bf16_1-MLC"
+    },
+    {
+      "model_id": "snowflake-arctic-embed-s-q0f32-MLC-b4",
+      "display_name": "Snowflake Arctic Embed S · Local Retrieval / RAG Model",
+      "category": "embedding",
+      "tags": [
+        "embedding",
+        "retrieval",
+        "rag",
+        "semantic-search"
+      ],
+      "good_for_text": "Embedding model, not a chatbot. Converts text into vectors for semantic similarity, document retrieval and a future local RAG pipeline. TGAI v0015 disables normal chat when it is loaded.",
+      "info_url": "https://huggingface.co/mlc-ai/snowflake-arctic-embed-s-q0f32-MLC-b4"
+    },
+    {
+      "model_id": "sd-turbo-ort-web",
+      "display_name": "SD-Turbo ORT Web · Fast Browser Image Baseline",
+      "category": "text-to-image",
+      "runtime": "ONNX Runtime Web / WebGPU",
+      "status": "tgai-working",
+      "reference_only": true,
+      "tags": [
+        "text-to-image",
+        "diffusion",
+        "webgpu",
+        "image-generation",
+        "browser",
+        "fast"
+      ],
+      "good_for_text": "PROMPT → IMAGE browser-local baseline proven in TGAI. Fast 1–4 pass generation with deterministic seeds and browser disk caching. Best used as the lightweight image-generation control.",
+      "info_url": "https://huggingface.co/schmuell/sd-turbo-ort-web"
+    },
+    {
+      "model_id": "sdxl-lightning-q4-ort-web",
+      "display_name": "SDXL-Lightning Q4 · Higher-Quality Browser Image Model",
+      "category": "text-to-image",
+      "runtime": "ONNX Runtime Web / WebGPU",
+      "status": "tgai-working",
+      "reference_only": true,
+      "tags": [
+        "text-to-image",
+        "sdxl",
+        "lightning",
+        "webgpu",
+        "image-generation",
+        "browser",
+        "q4"
+      ],
+      "good_for_text": "PROMPT → IMAGE higher-quality TGAI path. Uses SDXL dual text encoders, pooled conditioning/time IDs, quantized Lightning U-Net and split external ONNX weights. Heavier than SD-Turbo but proven end-to-end in the browser lab.",
+      "info_url": "https://huggingface.co/collections/onnx-community/sdxl-turbo-and-lightning-onnx-webgpu"
+    },
+    {
+      "model_id": "Qwen3-Coder-30B-A3B-Instruct",
+      "display_name": "Qwen3-Coder 30B-A3B · Local Coding Workstation Reference",
+      "category": "coding",
+      "runtime": "Ollama / llama.cpp / Transformers-class local runtime",
+      "status": "reference",
+      "reference_only": true,
+      "tags": [
+        "code",
+        "agentic-coding",
+        "qwen3",
+        "30b",
+        "moe",
+        "local-desktop",
+        "long-context"
+      ],
+      "good_for_text": "REFERENCE-ONLY for TGAI browser use. Serious local coding-workstation candidate: 30.5B total parameters with about 3.3B activated, native 256K context, tool/function-call oriented agentic coding, and repository-scale use. Ollama's Q4_K_M package is about 19 GB, making this a desktop-runtime target rather than a practical current browser target.",
+      "info_url": "https://huggingface.co/Qwen/Qwen3-Coder-30B-A3B-Instruct"
+    },
+    {
+      "model_id": "qwen3-coder:30b",
+      "display_name": "Qwen3-Coder 30B Q4 · Ollama Local Coding Reference",
+      "category": "coding",
+      "runtime": "Ollama",
+      "status": "reference",
+      "reference_only": true,
+      "tags": [
+        "code",
+        "ollama",
+        "qwen3",
+        "30b",
+        "q4",
+        "agentic-coding",
+        "local-desktop"
+      ],
+      "good_for_text": "REFERENCE-ONLY local runtime package for a coding workstation. Ollama lists the Q4_K_M build at roughly 19 GB with a 256K context window. Attractive for pairing with Open WebUI, OpenCode, or a future TGAI local-server frontend.",
+      "info_url": "https://ollama.com/library/qwen3-coder"
+    },
+    {
+      "model_id": "qwen3.5:9b",
+      "display_name": "Qwen3.5 9B · Modern Local General/Coding Control",
+      "category": "general",
+      "runtime": "Ollama",
+      "status": "reference",
+      "reference_only": true,
+      "tags": [
+        "qwen3.5",
+        "9b",
+        "vision",
+        "tools",
+        "thinking",
+        "coding",
+        "local-desktop"
+      ],
+      "good_for_text": "REFERENCE-ONLY local-desktop candidate. Ollama currently exposes Qwen3.5 9B at about 6.6 GB with 256K context plus text/image input, tools and thinking. It is a useful lighter bridge between browser-sized models and 20+ GB coding-workstation models.",
+      "info_url": "https://ollama.com/library/qwen3.5"
+    },
+    {
+      "model_id": "qwen3.5:27b-coding",
+      "display_name": "Qwen3.5 27B Coding · Emerging Local Coding Reference",
+      "category": "coding",
+      "runtime": "Ollama ecosystem / platform-specific local packages",
+      "status": "reference",
+      "reference_only": true,
+      "tags": [
+        "qwen3.5",
+        "27b",
+        "coding",
+        "vision",
+        "tools",
+        "thinking",
+        "local-desktop",
+        "experimental"
+      ],
+      "good_for_text": "REFERENCE-ONLY emerging coding variant. Ollama's current Qwen3.5 tag set includes 27B coding-oriented packages, including platform-specific quantizations. Treat as a local-workstation research target rather than a WebLLM/browser-loadable model, and verify the exact package/runtime before recommending it.",
+      "info_url": "https://ollama.com/library/qwen3.5/tags"
+    },
+    {
+      "model_id": "qwen3.5:35b-a3b-coding",
+      "display_name": "Qwen3.5 35B-A3B Coding · Emerging MoE Coding Reference",
+      "category": "coding",
+      "runtime": "Ollama ecosystem / platform-specific local packages",
+      "status": "reference",
+      "reference_only": true,
+      "tags": [
+        "qwen3.5",
+        "35b",
+        "a3b",
+        "moe",
+        "coding",
+        "tools",
+        "local-desktop",
+        "experimental"
+      ],
+      "good_for_text": "REFERENCE-ONLY emerging MoE coding target. Current Ollama tags expose coding-oriented 35B-A3B packages in several quantizations. This belongs in the heavyweight local coding-workstation track, not the browser track.",
+      "info_url": "https://ollama.com/library/qwen3.5/tags"
+    }
+  ]
+}
